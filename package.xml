@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>gs-lio</name>
+  <version>0.0.0</version>
+
+  <description>GS-LIO: An Immediate LiDAR Vision Inertia Localization and Gaussian Splatting Framework</description>
+
+  <maintainer email="peichun.huang@deltaww.com">pei chun huang</maintainer>
+  <author email="peichun.huang@deltaww.com">pei chun huang</author>
+  <license>MIT</license>
+
+  <!-- build tool -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- core ROS2 runtime libs used in the code -->
+  <depend>rclcpp</depend>
+  <depend>sophus</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>cv_bridge</depend>
+  <depend>tf2_ros</depend>
+
+  <!-- PCL and conversions -->
+  <depend>pcl_conversions</depend>
+  <depend>pcl_ros</depend>
+
+  <!-- Livox (if you use livox driver in ROS2, name may differ) -->
+  <depend>livox_ros_driver</depend>
+
+  <!-- common build-time libs -->
+  <build_depend>eigen3_cmake_module</build_depend>
+  <depend>Eigen3</depend>
+
+  <!-- message/runtime support (ros2 equivalent) -->
+  <depend>rosidl_default_runtime</depend>
+
+  <!-- tests/tools (optional) -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
