@@ -6,8 +6,15 @@
 
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include "plane.h"
 
 #include "LRU.h"
+
+#define VOXELMAP_HASH_P 116101
+#define VOXELMAP_MAX_N 10000000000
+
+namespace gs_lio
+{
 
 class VOXEL_LOCATION
 {
@@ -19,8 +26,57 @@ public:
   bool operator==(const VOXEL_LOCATION &other) const { return (x == other.x && y == other.y && z == other.z); }
 };
 
+class Voxel: public std::enable_shared_from_this<Voxel>
+{
+  private:
+    std::atomic<bool> need_update = false;
+    bool fixed = false;
+    std::shared_ptr<std::shared_mutex> operation_mtx;
+  public:
+    static constexpr size_t NUM_LEAVES = 8;  // octree structure
+    static int MAX_POINT_NUM;
+    static int MAX_LAYER;
+    static scalar_t BASIC_VOXEL_SIZE;
+    Voxel(const vector3_t &c, const scalar_t &ql, const int &l);
+    ~Voxel() = default;
+    int layer = 0;
+    vector3_t voxel_center = vector3_t::Zero();
+    scalar_t quater_length = 0;
+    std::shared_ptr<Plane> plane = nullptr;
+    std::array<std::shared_ptr<Voxel>, NUM_LEAVES> leaves{nullptr, nullptr, nullptr, nullptr,
+                                                          nullptr, nullptr, nullptr, nullptr};
+    void UpdateVoxel();
+    std::shared_ptr<Voxel> InsertPoint(const pcl::PointXYZITC &point_world);
+    std::shared_ptr<Plane> GetPlaneIter(const pcl::PointXYZITC &point);
+};
+
+class VoxelOctoTree
+{
+  public:
+    static int LRU_MAX_VOXEL_NUM;
+    VoxelOctoTree(rclcpp::Node &node);
+    void UpdateVoxelOctoTree(const pcl::PointCloud<pcl::PointXYZITC> &points_world);
+    std::shared_ptr<Plane> GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel = true);
+  private:
+    std::shared_ptr<std::shared_mutex> operation_mtx;
+    std::vector<std::shared_ptr<Voxel>> update_voxels_vector;
+    VOXEL_LOCATION get_hash(const pcl::PointXYZITC &point_world);
+    VOXEL_LOCATION get_near(const VOXEL_LOCATION &basic_voxel_location, const pcl::PointXYZITC &point_world);
+    
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub;
+    visualization_msgs::msg::Marker marker;
+    void initialize_marker();
+    void publish_voxel_markers();
+    rclcpp::Clock clock_;
+  protected:
+    std::shared_ptr<LRUCache<VOXEL_LOCATION, Voxel>> grids;
+};
+
+}
+
 namespace std
 {
+using namespace gs_lio;
 template <> struct hash<VOXEL_LOCATION>
 {
   int64_t operator()(const VOXEL_LOCATION &s) const
@@ -31,54 +87,5 @@ template <> struct hash<VOXEL_LOCATION>
   }
 };
 }
-
-class Voxel
-{
-public:
-  enum status
-  {
-    INIT,
-    SUCCESS,
-    FAILED,
-    FIXED,
-    ERROR
-  }
-private:
-  status state = INIT;
-  std::shared_ptr<std::shared_mutex> operation_mtx;
-  std::atomic<int> point_num = 0;
-  vector3_t voxel_center = vector3_t::Zero();
-  std::shared_ptr<Plane> plane;
-
-public:
-  static int MAX_POINT_NUM;
-  static int CONSTRUCT_THRESHOLD;
-  static float PLANE_THRESHOLD;
-  static float BASIC_VOXEL_SIZE;
-  Voxel(const vector3_t &c);
-  ~Voxel() = default;
-  void InsertPoint(const pcl::PointXYZITC &point_world);
-  std::shared_ptr<Plane> GetPlane(const pcl::PointXYZITC &point);
-  void UpdateVoxel();
-};
-
-class VoxelMap
-{
-private:
-  static int LRU_MAX_VOXEL_NUM;
-  static std::atomic<int> valid_plane_num;
-  std::shared_ptr<std::shared_mutex> operation_mtx;
-  VOXEL_LOCATION get_hash(const pcl::PointXYZITC &point_world);
-  VOXEL_LOCATION get_near(const VOXEL_LOCATION &basic_voxel_location, const pcl::PointXYZITC &point_world);
-  std::shared_ptr<LRUCache<VOXEL_LOCATION, Voxel>> grids;
-  std::vector<std::shared_ptr<Voxel>> update_voxels_vector;
-public:
-  VoxelMap();
-  ~VoxelMap() = default;
-  int GetValidPlaneNum() const { return valid_plane_num.load(); }
-  void UpdateVoxelMap(const pcl::PointCloud<pcl::PointXYZITC> &points_world);
-  std::shared_ptr<Plane> GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel = true);
-  std::shared_ptr<VOXEL_LOCATION> HasVoxel(const pcl::PointXYZITC &point_world);
-};
 
 #endif
