@@ -1,7 +1,7 @@
-FROM osrf/ros:humble-desktop AS base
+# FROM osrf/ros:humble-desktop AS base
 
 # on arm platform
-# FROM ros:humble AS base
+FROM ros:humble AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
