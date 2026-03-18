@@ -119,4 +119,22 @@ ament_target_dependencies(gs_lio_plane
   pcl_conversions
 )
 
+# Build voxel lib
+add_library(gs_lio_voxel
+  src/voxel.cc
+)
+
+target_link_libraries(gs_lio_voxel
+  gs_lio_plane
+  ${PCL_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
+)
+
+ament_target_dependencies(gs_lio_voxel
+  rclcpp
+  pcl_conversions
+  visualization_msgs
+  geometry_msgs
+)
+
 ament_package()
