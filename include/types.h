@@ -16,9 +16,23 @@ using stamp_t = double;
 using vector_t = Eigen::Matrix<scalar_t, Eigen::Dynamic, 1>;
 using matrix_t = Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic>;
 using quaternion_t = Eigen::Quaternion<scalar_t>;
+
+using vector2_t = Eigen::Matrix<scalar_t, 2, 1>;
 using vector3_t = Eigen::Matrix<scalar_t, 3, 1>;
+using vector4_t = Eigen::Matrix<scalar_t, 4, 1>;
+using vector6_t = Eigen::Matrix<scalar_t, 6, 1>;
+
+using vector2c_t = Eigen::Matrix<std::complex<scalar_t>, 2, 1>;
 using vector3c_t = Eigen::Matrix<std::complex<scalar_t>, 3, 1>;
+
+using matrix2_t = Eigen::Matrix<scalar_t, 2, 2>;
 using matrix3_t = Eigen::Matrix<scalar_t, 3, 3>;
+using matrix4_t = Eigen::Matrix<scalar_t, 4, 4>;
+using matrix6_t = Eigen::Matrix<scalar_t, 6, 6>;
+
+using matrix32_t = Eigen::Matrix<scalar_t, 3, 2>;
+
+using matrix2c_t = Eigen::Matrix<std::complex<scalar_t>, 2, 2>;
 using matrix3c_t = Eigen::Matrix<std::complex<scalar_t>, 3, 3>;
 
 using se3_t = Sophus::SE3<scalar_t>;

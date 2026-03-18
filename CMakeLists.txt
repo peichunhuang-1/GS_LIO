@@ -128,6 +128,7 @@ target_link_libraries(gs_lio_voxel
   gs_lio_plane
   ${PCL_LIBRARIES}
   ${EIGEN3_LIBRARIES}
+  mimalloc-static 
 )
 
 ament_target_dependencies(gs_lio_voxel
@@ -136,5 +137,25 @@ ament_target_dependencies(gs_lio_voxel
   visualization_msgs
   geometry_msgs
 )
+
+# Build lidar plugin lib
+add_library(gs_lio_lidar_plugin
+  src/lidar_plugin.cc
+)
+
+target_link_libraries(gs_lio_lidar_plugin
+  ${PCL_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
+  Sophus::Sophus
+  mimalloc-static 
+)
+
+ament_target_dependencies(gs_lio_lidar_plugin
+  rclcpp
+  pcl_conversions
+)
+
+# add plugins
+add_subdirectory(plugins)
 
 ament_package()
