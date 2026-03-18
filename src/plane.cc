@@ -2,10 +2,10 @@
 
 namespace gs_lio
 {
-scalar_t Plane::PLANE_THRESHOLD = 0.0025;
-int Plane::CONSTRUCT_THRESHOLD = 12;
+scalar_t PlaneImpl::PLANE_THRESHOLD = 0.0025;
+int PlaneImpl::CONSTRUCT_THRESHOLD = 12;
 // Assignment operator
-Plane& Plane::operator=(const Plane& other)
+PlaneImpl& PlaneImpl::operator=(const PlaneImpl& other)
 {
   if (this != &other) {
     normal_ = other.normal_;
@@ -22,7 +22,7 @@ Plane& Plane::operator=(const Plane& other)
   return *this;
 }
 
-void Plane::insert_point(const pcl::PointXYZITC &point)
+void PlaneImpl::insert_point(const pcl::PointXYZITC &point)
 {
   std::unique_lock<std::shared_mutex> lock(*mtx);
   vector3_t pw_eigen = point.xyz().cast<scalar_t>();
@@ -43,7 +43,7 @@ void Plane::insert_point(const pcl::PointXYZITC &point)
   point_num_++;
 }
 
-void Plane::update()
+void PlaneImpl::update()
 {
   std::unique_lock<std::shared_mutex> lock(*mtx);
   if (point_num_ < CONSTRUCT_THRESHOLD) 
@@ -65,7 +65,7 @@ void Plane::update()
   // find min and max eigenvalue indices
   eigen_vals_real.minCoeff(&eigen_vals_min);
   eigen_vals_real.maxCoeff(&eigen_vals_max);
-  if (eigen_vals_real(eigen_vals_min) > Plane::PLANE_THRESHOLD) 
+  if (eigen_vals_real(eigen_vals_min) > PLANE_THRESHOLD) 
   {
     is_valid_ = false;
     return;
@@ -75,7 +75,8 @@ void Plane::update()
   vector3_t eigen_vec_mid = eigen_vecs.real().col(3 - eigen_vals_min - eigen_vals_max);
   vector3_t eigen_vec_max = eigen_vecs.real().col(eigen_vals_max);
   matrix3_t J_Q = 1.0 / static_cast<scalar_t>(point_num_) * matrix3_t::Identity();
-
+  
+  // Prefix sum for uncertainty calculation, TODO: mathematical derivation should be clean to read
   scalar_t n_x_l1_l2 = point_num_ * (eigen_vals_real(eigen_vals_min) - eigen_vals_real(3 - eigen_vals_min - eigen_vals_max));
   scalar_t n_x_l1_l3 = point_num_ * (eigen_vals_real(eigen_vals_min) - eigen_vals_real(eigen_vals_max));
   

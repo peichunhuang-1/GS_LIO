@@ -2,6 +2,7 @@
 #define GS_LIO_PLANE_H
 
 #include "types.h"
+#include <climits>
 
 namespace gs_lio
 {
@@ -9,13 +10,30 @@ namespace gs_lio
 class Plane
 {
 public:
+  virtual bool is_valid() { return false; }
+  virtual vector3_t normal() const { return vector3_t::Zero(); }
+  virtual vector3_t main_axis() const { return vector3_t::Zero(); }
+  virtual vector3_t secondary_axis() const { return vector3_t::Zero(); }
+  virtual vector3_t center() const { return vector3_t::Zero(); }
+  virtual scalar_t d() const { return 0; }
+  virtual scalar_t radius() const { return 0; }
+  virtual matrix3_t covariance() const { return matrix3_t::Zero(); }
+  virtual matrix_t uncertainty() const { return matrix_t::Zero(6, 6); }
+  virtual int point_num() const { return INT_MAX; }
+  virtual void insert_point(const pcl::PointXYZITC &point) {}
+  virtual void update() {}
+};
+
+class PlaneImpl : public Plane
+{
+public:
   static scalar_t PLANE_THRESHOLD;
   static int CONSTRUCT_THRESHOLD;
   // Default constructor
-  Plane() : is_valid_(false), mtx(std::make_shared<std::shared_mutex>()) {}
+  PlaneImpl() : is_valid_(false), mtx(std::make_shared<std::shared_mutex>()) {}
   
   // Copy constructor
-  Plane(const Plane& other)
+  PlaneImpl(const PlaneImpl& other)
     : normal_(other.normal_),
       main_axis_(other.main_axis_),
       secondary_axis_(other.secondary_axis_),
@@ -27,21 +45,21 @@ public:
       is_valid_(other.is_valid_),
       mtx(std::make_shared<std::shared_mutex>()) {}
   // Assignment operator
-  Plane& operator=(const Plane& other);
+  PlaneImpl& operator=(const PlaneImpl& other);
   
-  void insert_point(const pcl::PointXYZITC &point);
-  void update();
+  virtual void insert_point(const pcl::PointXYZITC &point) override;
+  virtual void update() override;
 
-  bool is_valid() const { std::shared_lock<std::shared_mutex> lock(*mtx); return is_valid_; }
-  vector3_t normal() const { std::shared_lock<std::shared_mutex> lock(*mtx); return normal_; }
-  vector3_t main_axis() const { std::shared_lock<std::shared_mutex> lock(*mtx); return main_axis_; }
-  vector3_t secondary_axis() const { std::shared_lock<std::shared_mutex> lock(*mtx); return secondary_axis_; }
-  vector3_t center() const { std::shared_lock<std::shared_mutex> lock(*mtx); return center_; }
-  scalar_t d() const { std::shared_lock<std::shared_mutex> lock(*mtx); return d_; }
-  scalar_t radius() const { std::shared_lock<std::shared_mutex> lock(*mtx); return radius_; }
-  matrix3_t covariance() const { std::shared_lock<std::shared_mutex> lock(*mtx); return covariance_; }
-  matrix_t uncertainty() const { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
-
+  virtual bool is_valid() const { std::shared_lock<std::shared_mutex> lock(*mtx); return is_valid_; }
+  virtual vector3_t normal() const { std::shared_lock<std::shared_mutex> lock(*mtx); return normal_; }
+  virtual vector3_t main_axis() const { std::shared_lock<std::shared_mutex> lock(*mtx); return main_axis_; }
+  virtual vector3_t secondary_axis() const { std::shared_lock<std::shared_mutex> lock(*mtx); return secondary_axis_; }
+  virtual vector3_t center() const { std::shared_lock<std::shared_mutex> lock(*mtx); return center_; }
+  virtual scalar_t d() const { std::shared_lock<std::shared_mutex> lock(*mtx); return d_; }
+  virtual scalar_t radius() const { std::shared_lock<std::shared_mutex> lock(*mtx); return radius_; }
+  virtual matrix3_t covariance() const { std::shared_lock<std::shared_mutex> lock(*mtx); return covariance_; }
+  virtual matrix_t uncertainty() const { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
+  virtual int point_num() const { std::shared_lock<std::shared_mutex> lock(*mtx); return point_num_; }
 private:
   std::shared_ptr<std::shared_mutex> mtx;
   bool is_valid_ = false;
