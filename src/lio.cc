@@ -296,7 +296,8 @@ int main(int argc, char* argv[])
     {
       auto tailstamp = lio_node->wait_lidar();
       if (tailstamp < 0) continue;
-      while (imu_node->forward(tailstamp))
+      if (!lio_node->is_init()) tailstamp = -1;
+      while (!imu_node->forward(tailstamp) && tailstamp > 0)
       {
         lio_node->forward(tailstamp);
       }

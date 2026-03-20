@@ -35,6 +35,7 @@ class Lio: public estimator, public rclcpp::Node
     void optimize() override;
     void reset(const state_t &state) override;
     stamp_t wait_lidar(int timeout_ms = 200);
+    bool is_init() {return current_status == INITIALED;}
   private:
     std::atomic<status> current_status = IDLE;
     matrix_t G = matrix_t::Identity(18, 18);

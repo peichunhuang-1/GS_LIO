@@ -44,7 +44,12 @@ bool Imu::forward(const stamp_t &tailstamp)
     if (!buffer.empty())
     {
       state_t state = get_state();
-      state.set_timestamp(stamp_to_sec(buffer.back()->header.stamp));
+      auto msg = buffer.back();
+      vector3_t accel_tail(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
+      vector3_t ang_vel_tail(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+      state.set_timestamp(stamp_to_sec(msg->header.stamp));
+      state.set_imu_acceleration(accel_tail);
+      state.set_imu_angular_velocity(ang_vel_tail);
       set_state(state);
     }
     buffer.clear();
@@ -56,7 +61,12 @@ bool Imu::forward(const stamp_t &tailstamp)
   */
   if (buffer.empty()) return false;
   bool ret = stamp_to_sec(buffer.front()->header.stamp) < tailstamp? false: true;
-  set_state(forward_impl(get_state(), buffer.front(), tailstamp));
+  auto forward_tailstamp = std::min(tailstamp, stamp_to_sec(buffer.front()->header.stamp));
+  set_state(forward_impl(get_state(), buffer.front(), forward_tailstamp));
+  RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
+          get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
+          get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
+          get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z());
   buffer.pop_front();
   return ret;
 }
