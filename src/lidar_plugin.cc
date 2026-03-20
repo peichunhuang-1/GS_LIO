@@ -58,4 +58,23 @@ matrix3_t Lidar::point_covariance(const vector3_t &point) {
   return cov;
 }
 
+LidarPluginFactory& LidarPluginFactory::instance() 
+{
+  static LidarPluginFactory f;
+  return f;
+}
+
+void LidarPluginFactory::register_creator(const std::string& name, Creator c) 
+{
+  creators_[name] = std::move(c);
+}
+
+std::unique_ptr<Lidar> LidarPluginFactory::create(const std::string& name, rclcpp::Node& node) 
+{
+  RCLCPP_INFO(node.get_logger(), "Load plugin %s", name.c_str());
+  if (creators_.count(name))
+    return creators_[name](node);
+  return nullptr;
+}
+
 }

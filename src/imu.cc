@@ -3,7 +3,7 @@
 namespace gs_lio
 {
 
-Imu::Imu() : rclcpp::Node("imu_node"), mtx(std::make_shared<std::shared_mutex>())
+Imu::Imu() : estimator(), rclcpp::Node("gs_lio_imu_node"), mtx(std::make_shared<std::shared_mutex>())
 {
   std::string imu_topic;
   this->declare_parameter<std::string>("imu.topic", "/livox/imu");
@@ -67,8 +67,8 @@ state_t Imu::forward_impl(const state_t & state, sensor_msgs::msg::Imu::ConstSha
   if (dt < 0) throw std::runtime_error("forward time difference cannot be nagtive");
   vector3_t accel_tail(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
   vector3_t ang_vel_tail(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
-  vector3_t mean_accel = accel_tail * GRAVITY_CONSTANT - state.get_linear_bias();
-  vector3_t mean_ang_vel = ang_vel_tail - state.get_angular_bias();
+  vector3_t mean_accel = 0.5 * (accel_tail + state.get_imu_acceleration()) * GRAVITY_CONSTANT - state.get_linear_bias();
+  vector3_t mean_ang_vel = 0.5 * (ang_vel_tail + state.get_imu_angular_velocity()) - state.get_angular_bias();
   // propagate state
   matrix3_t mean_accel_skew = Sophus::SO3<scalar_t>::hat(mean_accel);
   matrix_t Fx = matrix_t::Identity(18, 18);

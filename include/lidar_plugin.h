@@ -3,6 +3,8 @@
 
 #include "types.h"
 #include <queue>
+#include <unordered_map>
+#include <functional>
 
 namespace gs_lio
 {
@@ -11,9 +13,9 @@ class Lidar
 {
   public:
     Lidar(rclcpp::Node &node);
-    std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> get_pointcloud();
-    stamp_t wait_available(const int &timeout_ms); 
-    matrix3_t point_covariance(const Eigen::Vector<scalar_t, 3> &point);
+    virtual std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> get_pointcloud();
+    virtual stamp_t wait_available(const int &timeout_ms); 
+    virtual matrix3_t point_covariance(const Eigen::Vector<scalar_t, 3> &point);
   protected:
     std::shared_ptr<std::shared_mutex> mtx;
     std::condition_variable_any cv;
@@ -28,6 +30,33 @@ class Lidar
     std::queue<std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>>> raw_pointcloud_buffer;
 };
 
+class LidarPluginFactory 
+{
+  public:
+    using Creator = std::function<std::unique_ptr<Lidar>(rclcpp::Node&)>;
+    static LidarPluginFactory& instance();
+    void register_creator(const std::string& name, Creator c);
+    std::unique_ptr<Lidar> create(const std::string& name, rclcpp::Node& node);
+  private:
+    std::unordered_map<std::string, Creator> creators_;
+};
+
+}
+
+#define REGISTER_LIDAR(NAME, TYPE)                                     \
+namespace gs_lio                                                       \
+{                                                                      \
+struct TYPE##Registrar {                                               \
+    TYPE##Registrar() {                                                \
+        LidarPluginFactory::instance().register_creator(               \
+            NAME,                                                      \
+            [](rclcpp::Node &node) -> std::unique_ptr<Lidar> {         \
+                return std::make_unique<TYPE>(node);                   \
+            }                                                          \
+        );                                                             \
+    }                                                                  \
+};                                                                     \
+static TYPE##Registrar global_##TYPE##_registrar;                      \
 }
 
 #endif

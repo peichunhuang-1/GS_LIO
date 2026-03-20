@@ -95,6 +95,14 @@ public:
   void set_imu_acceleration(const vector3_t& imu_acceleration) {this->imu_acceleration = imu_acceleration;}
   void set_imu_angular_velocity(const vector3_t& imu_angular_velocity) {this->imu_angular_velocity = imu_angular_velocity;}
   void set_covariance(const matrix_t& covariance) {this->covariance = covariance;}
+
+
+  state_t slerp(const stamp_t &tailstamp) const;
+
+  vector3_t measurement_project(const state_t& measured_state, 
+                                const vector3_t &measurement, 
+                                const matrix3_t &extrinsic_orientation,
+                                const vector3_t &extrinsic_translation) const;
 private:
   stamp_t timestamp;
   se3_t transform;

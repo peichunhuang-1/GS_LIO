@@ -6,6 +6,7 @@ int Voxel::MAX_POINT_NUM = 250;
 int Voxel::MAX_LAYER = 3;
 scalar_t Voxel::BASIC_VOXEL_SIZE = 0.5;
 
+std::atomic<int> VoxelOctoTree::VALID_PLANE_NUM = 0;
 int VoxelOctoTree::LRU_MAX_VOXEL_NUM = 70000;
 
 Voxel::Voxel(const vector3_t &c, const scalar_t &ql, const int &l) 
@@ -13,6 +14,11 @@ Voxel::Voxel(const vector3_t &c, const scalar_t &ql, const int &l)
 {
   operation_mtx = std::make_shared<std::shared_mutex>();
   plane = std::make_shared<PlaneImpl>();
+}
+
+Voxel::~Voxel()
+{
+  if (plane->is_valid() && VoxelOctoTree::VALID_PLANE_NUM.load() > 0) VoxelOctoTree::VALID_PLANE_NUM --;
 }
 
 std::shared_ptr<Voxel> Voxel::InsertPoint(const pcl::PointXYZITC &point_world)
@@ -65,7 +71,10 @@ void Voxel::UpdateVoxel()
   if (!need_update.load()) return;
   need_update.store(false);
   std::unique_lock<std::shared_mutex> lock(*operation_mtx);
+  bool valid_before_update = plane->is_valid();
   plane->update();
+  if (valid_before_update && !plane->is_valid()) VoxelOctoTree::VALID_PLANE_NUM--;
+  else if (!valid_before_update && plane->is_valid()) VoxelOctoTree::VALID_PLANE_NUM++;
 }
 
 std::shared_ptr<Plane> Voxel::GetPlaneIter(const pcl::PointXYZITC &point)
@@ -106,6 +115,11 @@ VoxelOctoTree::VoxelOctoTree(rclcpp::Node &node) : clock_(RCL_ROS_TIME)
   node.get_parameter_or<std::string>("voxel.marker_topic", marker_topic, "/voxel/octotree_markers");
   marker_pub = node.create_publisher<visualization_msgs::msg::Marker>(marker_topic, 10);
   initialize_marker();
+}
+
+VoxelOctoTree::~VoxelOctoTree() 
+{
+  VoxelOctoTree::VALID_PLANE_NUM.store(0);
 }
 
 void VoxelOctoTree::initialize_marker()

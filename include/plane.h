@@ -10,7 +10,7 @@ namespace gs_lio
 class Plane
 {
 public:
-  virtual bool is_valid() { return false; }
+  virtual bool is_valid() const { return false; }
   virtual vector3_t normal() const { return vector3_t::Zero(); }
   virtual vector3_t main_axis() const { return vector3_t::Zero(); }
   virtual vector3_t secondary_axis() const { return vector3_t::Zero(); }
@@ -50,16 +50,16 @@ public:
   virtual void insert_point(const pcl::PointXYZITC &point) override;
   virtual void update() override;
 
-  virtual bool is_valid() const { std::shared_lock<std::shared_mutex> lock(*mtx); return is_valid_; }
-  virtual vector3_t normal() const { std::shared_lock<std::shared_mutex> lock(*mtx); return normal_; }
-  virtual vector3_t main_axis() const { std::shared_lock<std::shared_mutex> lock(*mtx); return main_axis_; }
-  virtual vector3_t secondary_axis() const { std::shared_lock<std::shared_mutex> lock(*mtx); return secondary_axis_; }
-  virtual vector3_t center() const { std::shared_lock<std::shared_mutex> lock(*mtx); return center_; }
-  virtual scalar_t d() const { std::shared_lock<std::shared_mutex> lock(*mtx); return d_; }
-  virtual scalar_t radius() const { std::shared_lock<std::shared_mutex> lock(*mtx); return radius_; }
-  virtual matrix3_t covariance() const { std::shared_lock<std::shared_mutex> lock(*mtx); return covariance_; }
-  virtual matrix_t uncertainty() const { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
-  virtual int point_num() const { std::shared_lock<std::shared_mutex> lock(*mtx); return point_num_; }
+  virtual bool is_valid() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return is_valid_; }
+  virtual vector3_t normal() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return normal_; }
+  virtual vector3_t main_axis() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return main_axis_; }
+  virtual vector3_t secondary_axis() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return secondary_axis_; }
+  virtual vector3_t center() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return center_; }
+  virtual scalar_t d() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return d_; }
+  virtual scalar_t radius() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return radius_; }
+  virtual matrix3_t covariance() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return covariance_; }
+  virtual matrix_t uncertainty() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
+  virtual int point_num() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return point_num_; }
 private:
   std::shared_ptr<std::shared_mutex> mtx;
   bool is_valid_ = false;

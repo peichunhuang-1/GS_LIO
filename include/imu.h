@@ -5,7 +5,6 @@
 #include "sensor_msgs/msg/imu.hpp"
 
 #define MAX_IMU_BUFFER_SIZE 6000
-#define GRAVITY_CONSTANT 9.81
 
 
 namespace gs_lio

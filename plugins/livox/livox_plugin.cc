@@ -44,3 +44,5 @@ void Livox::cb(const livox_ros_driver2::msg::CustomMsg::SharedPtr msg)
 }
 
 }
+
+REGISTER_LIDAR("livox", Livox)

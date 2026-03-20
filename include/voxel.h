@@ -38,7 +38,7 @@ class Voxel: public std::enable_shared_from_this<Voxel>
     static int MAX_LAYER;
     static scalar_t BASIC_VOXEL_SIZE;
     Voxel(const vector3_t &c, const scalar_t &ql, const int &l);
-    ~Voxel() = default;
+    ~Voxel();
     int layer = 0;
     vector3_t voxel_center = vector3_t::Zero();
     scalar_t quater_length = 0;
@@ -54,7 +54,9 @@ class VoxelOctoTree
 {
   public:
     static int LRU_MAX_VOXEL_NUM;
+    static std::atomic<int> VALID_PLANE_NUM;
     VoxelOctoTree(rclcpp::Node &node);
+    ~VoxelOctoTree();
     void UpdateVoxelOctoTree(const pcl::PointCloud<pcl::PointXYZITC> &points_world);
     std::shared_ptr<Plane> GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel = true);
   private:

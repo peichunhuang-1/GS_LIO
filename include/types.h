@@ -6,6 +6,8 @@
 #include <sophus/se3.hpp>
 #include <sophus/so3.hpp>
 
+#define GRAVITY_CONSTANT 9.81
+
 namespace gs_lio
 {
 using scalar_t = double;
