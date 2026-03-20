@@ -46,6 +46,8 @@ find_package(livox_ros_driver2 REQUIRED)
 FIND_PACKAGE(OpenCV REQUIRED core calib3d features2d highgui imgproc)
 find_package(cv_bridge REQUIRED)
 find_package(OpenMP QUIET)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(Sophus REQUIRED)
 
 if(OpenMP_CXX_FOUND)
@@ -157,5 +159,46 @@ ament_target_dependencies(gs_lio_lidar_plugin
 
 # add plugins
 add_subdirectory(plugins)
+
+# Build lio lib
+add_library(gs_lio 
+  src/lio.cc
+)
+
+target_link_libraries(gs_lio 
+  gs_lio_voxel
+  gs_lio_lidar_plugin
+  gs_lio_estimator
+  plugins
+)
+
+ament_target_dependencies(gs_lio
+  rclcpp
+  pcl_conversions
+  tf2_ros
+  tf2_eigen
+)
+
+# Build lio node
+add_executable(lio_node
+  src/lio.cc
+)
+
+target_link_libraries(lio_node 
+  gs_lio 
+  gs_lio_imu
+)
+
+ament_target_dependencies(lio_node
+  rclcpp
+  pcl_conversions
+  tf2_ros
+  tf2_eigen
+)
+
+install(TARGETS
+  lio_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
