@@ -57,8 +57,8 @@ public:
   ~state_t() = default;
   // operators
   state_t& operator=(const state_t& other);
-  state_t operator+=(const vector_t& delta) const;
-  state_t operator-=(const vector_t& delta) const;
+  state_t operator+=(const vector_t& delta);
+  state_t operator-=(const vector_t& delta);
   vector_t operator-(const state_t& other) const;
   // getters
   stamp_t get_timestamp() const {return timestamp;}

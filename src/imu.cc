@@ -61,12 +61,8 @@ bool Imu::forward(const stamp_t &tailstamp)
   */
   if (buffer.empty()) return false;
   bool ret = stamp_to_sec(buffer.front()->header.stamp) < tailstamp? false: true;
-  auto forward_tailstamp = std::min(tailstamp, stamp_to_sec(buffer.front()->header.stamp));
+  stamp_t forward_tailstamp = std::min(tailstamp, stamp_to_sec(buffer.front()->header.stamp));
   set_state(forward_impl(get_state(), buffer.front(), forward_tailstamp));
-  RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
-          get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
-          get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
-          get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z());
   buffer.pop_front();
   return ret;
 }
@@ -95,14 +91,14 @@ state_t Imu::forward_impl(const state_t & state, sensor_msgs::msg::Imu::ConstSha
   W.block<3, 3>(9, 9).diagonal() = measure_noise.segment<3>(6) * dt * dt;
   W.block<3, 3>(12, 12).diagonal() = measure_noise.segment<3>(9) * dt * dt;
 
-  auto tail_covariance = Fx * state.get_covariance() * Fx.transpose() + W;
+  matrix_t tail_covariance = Fx * state.get_covariance() * Fx.transpose() + W;
   so3_t dR = so3_t::exp(mean_ang_vel * dt);
   vector3_t accel_world = state.get_rotation().matrix() * mean_accel + state.get_gravity();
 
   so3_t tail_rotation = state.get_rotation() * dR;
   vector3_t tail_translation = state.get_translation() + state.get_linear_velocity() * dt + 0.5 * accel_world * dt * dt;
   vector3_t tail_linear_velocity = state.get_linear_velocity() + accel_world * dt;
-  auto state_forwarded = state_t(tailstamp, 
+  state_t state_forwarded = state_t(tailstamp, 
                                  tail_rotation, 
                                  tail_translation, 
                                  tail_linear_velocity, 

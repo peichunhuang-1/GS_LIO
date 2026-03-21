@@ -54,30 +54,28 @@ state_t& state_t::operator=(const state_t& other)
   return *this;
 }
 
-state_t state_t::operator+=(const vector_t& delta) const
+state_t state_t::operator+=(const vector_t& delta)
 {
-  state_t result(*this);
-  result.transform.so3() = result.transform.so3() * so3_t::exp(delta.segment<3>(0).eval());
-  result.transform.translation() += delta.segment<3>(3);
-  result.linear_velocity += delta.segment<3>(6);
-  result.angular_bias += delta.segment<3>(9);
-  result.linear_bias += delta.segment<3>(12);
-  result.gravity += delta.segment<3>(15);
+  this->transform.so3() = this->transform.so3() * so3_t::exp(delta.segment<3>(0).eval());
+  this->transform.translation() += delta.segment<3>(3);
+  this->linear_velocity += delta.segment<3>(6);
+  this->angular_bias += delta.segment<3>(9);
+  this->linear_bias += delta.segment<3>(12);
+  this->gravity += delta.segment<3>(15);
   // covariance is not updated here, as it should be handled by the estimator
-  return result;
+  return *this;
 }
 
-state_t state_t::operator-=(const vector_t& delta) const
+state_t state_t::operator-=(const vector_t& delta)
 {
-  state_t result(*this);
-  result.transform.so3() = so3_t::exp(delta.segment<3>(0).eval()).inverse() * result.transform.so3();
-  result.transform.translation() -= delta.segment<3>(3);
-  result.linear_velocity -= delta.segment<3>(6);
-  result.angular_bias -= delta.segment<3>(9);
-  result.linear_bias -= delta.segment<3>(12);
-  result.gravity -= delta.segment<3>(15);
+  this->transform.so3() = so3_t::exp(delta.segment<3>(0).eval()).inverse() * this->transform.so3();
+  this->transform.translation() -= delta.segment<3>(3);
+  this->linear_velocity -= delta.segment<3>(6);
+  this->angular_bias -= delta.segment<3>(9);
+  this->linear_bias -= delta.segment<3>(12);
+  this->gravity -= delta.segment<3>(15);
   // covariance is not updated here, as it should be handled by the estimator
-  return result;
+  return *this;
 }
 
 vector_t state_t::operator-(const state_t& other) const

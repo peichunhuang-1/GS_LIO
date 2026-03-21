@@ -10,7 +10,7 @@
 
 namespace gs_lio
 {
-using scalar_t = double;
+using scalar_t = float;
 using stamp_t = double;
 
 #define pi_t static_cast<scalar_t>(std::acos(-1.0));

@@ -73,9 +73,7 @@ bool Lio::try_initialize()
   {
     const auto &p = raw_points->points[i];
     pcl::PointXYZITC projected_point_with_cov;
-    projected_point_with_cov.x = p.x;
-    projected_point_with_cov.y = p.y;
-    projected_point_with_cov.z = p.z;
+    projected_point_with_cov.xyz() = p.xyz();
     projected_point_with_cov.intensity = p.intensity;
     projected_point_with_cov.timestamp = p.timestamp;
     projected_point_with_cov.covariance() = lidar->point_covariance(p.xyz().cast<scalar_t>()).cast<float>();
@@ -146,9 +144,7 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::transform_pointcloud_to_world_frame(
     vector3_t p_body = lidar_imu_extrinsic_orientation.toRotationMatrix() * p_lidar + lidar_imu_extrinsic_translation;
     vector3_t p_world = state.get_rotation() * p_body + state.get_translation();
     pcl::PointXYZITC &pw = pointcloud_world.points[i];
-    pw.x = p_world.x();
-    pw.y = p_world.y();
-    pw.z = p_world.z();
+    pw.xyz() = p_world.cast<float>();
     pw.intensity = p.intensity;
     pw.timestamp = p.timestamp;
     matrix3_t point_cross = Sophus::SO3<scalar_t>::hat(p_body);
@@ -214,11 +210,12 @@ vector_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals,
 
 
 void Lio::optimize() {
+  RCLCPP_INFO(this->get_logger(), "start optimize");
   if (!try_initialize()) return;
   auto raw_points = lidar->get_pointcloud();
   auto projected_undistorted_points = undistorted_pointcloud(raw_points);
-  auto propagated_state = get_state();
-  auto updated_state = propagated_state;
+  state_t propagated_state = get_state();
+  state_t updated_state = propagated_state;
   for (int i = 0; i < lio_max_iter; i++) {
     auto world_points = transform_pointcloud_to_world_frame(
       projected_undistorted_points,
@@ -240,8 +237,8 @@ void Lio::optimize() {
       propagated_queue.clear();
       return;
     }
-    auto error_state = propagated_state - updated_state;
-    auto compensated_state = ieskf(residuals, error_state);
+    vector_t error_state = propagated_state - updated_state;
+    vector_t compensated_state = ieskf(residuals, error_state);
 
     updated_state += compensated_state;
     set_state(updated_state); // sync the state with optimal state
@@ -264,6 +261,11 @@ void Lio::optimize() {
     this->voxel_tree->UpdateVoxelOctoTree(world_points);
   });
   propagated_queue.clear();
+  RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
+    get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
+    get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
+    get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z()
+  );
 }
 
 void Lio::reset(const state_t &state) 
@@ -303,7 +305,6 @@ int main(int argc, char* argv[])
       }
       lio_node->forward(tailstamp);
       lio_node->optimize();
-      RCLCPP_INFO(lio_node->get_logger(), "lidar receive");
     }
   });
   executor.spin();

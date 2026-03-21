@@ -62,6 +62,7 @@ public:
   virtual int point_num() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return point_num_; }
 private:
   std::shared_ptr<std::shared_mutex> mtx;
+  pcl::PointCloud<pcl::PointXYZITC> points; // tmp
   bool is_valid_ = false;
   int point_num_ = 0;
   vector3_t normal_;
