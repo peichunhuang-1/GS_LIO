@@ -16,7 +16,7 @@ else()
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  add_compile_options(-O3 -ffast-math)
+  add_compile_options(-O3)
   if(IS_ARM)
     add_compile_options(-mcpu=cortex-a72)
     message(STATUS "Using ARM optimization: -mcpu=cortex-a72")
