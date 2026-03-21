@@ -15,8 +15,11 @@ using stamp_t = double;
 
 #define pi_t static_cast<scalar_t>(std::acos(-1.0));
 
-using vector_t = Eigen::Matrix<scalar_t, Eigen::Dynamic, 1>;
-using matrix_t = Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic>;
+template<int N>
+using vector_t = Eigen::Matrix<scalar_t, N, 1>;
+template<int M, int N>
+using matrix_t = Eigen::Matrix<scalar_t, M, N>;
+
 using quaternion_t = Eigen::Quaternion<scalar_t>;
 
 using vector2_t = Eigen::Matrix<scalar_t, 2, 1>;

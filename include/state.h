@@ -110,7 +110,7 @@ private:
   vector3_t angular_bias;
   vector3_t linear_bias;
   vector3_t gravity = vector3_t(0.0, 0.0, -GRAVITY_CONSTANT);
-  matrix18_t covariance = 0.01 * matrix_t::Identity(18, 18);
+  matrix18_t covariance = 0.01 * matrix18_t::Identity();
   // inertial measurements
   vector3_t imu_acceleration;
   vector3_t imu_angular_velocity;

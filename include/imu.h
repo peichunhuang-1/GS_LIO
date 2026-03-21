@@ -23,7 +23,7 @@ private:
   std::deque<sensor_msgs::msg::Imu::ConstSharedPtr> buffer;
   std::condition_variable_any cv;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub;
-  vector12_t measure_noise = vector_t::Zero(12);
+  vector12_t measure_noise = vector12_t::Zero();
 };
 
 }

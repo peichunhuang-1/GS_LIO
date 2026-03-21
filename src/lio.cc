@@ -91,7 +91,7 @@ bool Lio::try_initialize()
   return false;
 }
 
-pcl::PointCloud<pcl::PointXYZITC> Lio::undistorted_pointcloud(const std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> &raw_pointcloud) 
+pcl::PointCloud<pcl::PointXYZITC> Lio::undistorted_pointcloud(const state_t &current_state, const std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> &raw_pointcloud) 
 {
   pcl::PointCloud<pcl::PointXYZITC> projected_undistorted_pointcloud;
   if (propagated_queue.empty()) return std::move(projected_undistorted_pointcloud);
@@ -112,7 +112,7 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::undistorted_pointcloud(const std::shared_
         continue;
       }
       state_t measured_state = cptr.slerp(tailstamp);
-      vector3_t projected_point = get_state().measurement_project(
+      vector3_t projected_point = current_state.measurement_project(
         measured_state,
         p.xyz().cast<scalar_t>(),
         lidar_imu_extrinsic_orientation.toRotationMatrix(),
@@ -156,14 +156,14 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::transform_pointcloud_to_world_frame(
   return pointcloud_world;
 }
 
-std::shared_ptr<Residual> Lio::build_residual(const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane) {
+std::shared_ptr<Residual> Lio::build_residual(const state_t& current_state, const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane) {
   std::shared_ptr<Residual> residual = std::make_shared<Residual>();
   vector3_t point_to_center_vector = pw.xyz().cast<scalar_t>() - plane->center();
   scalar_t point_to_plane_distance = plane->normal().dot(pw.xyz().cast<scalar_t>()) + plane->d();
   scalar_t point_to_center_distance = point_to_center_vector.norm();
   scalar_t range_distance = sqrt(point_to_center_distance * point_to_center_distance - point_to_plane_distance * point_to_plane_distance);
   if (range_distance <= static_cast<scalar_t>(radius_sigma_num * plane->radius())) {
-    matrix_t J_nq(1, 6);
+    matrix_t<1, 6> J_nq;
     J_nq.block<1, 3>(0, 0) = point_to_center_vector;
     J_nq.block<1, 3>(0, 3) = -plane->normal();
     scalar_t res = (J_nq * plane->uncertainty() * J_nq.transpose()).value();
@@ -174,7 +174,7 @@ std::shared_ptr<Residual> Lio::build_residual(const pcl::PointXYZITC &pw, const 
       vector3_t p_lidar = pl.xyz().cast<scalar_t>();
       vector3_t p_body = lidar_imu_extrinsic_orientation.toRotationMatrix() * p_lidar + lidar_imu_extrinsic_translation;
       matrix3_t point_cross = Sophus::SO3<scalar_t>::hat(p_body);
-      vector3_t A = point_cross * get_state().get_rotation().matrix().transpose() * plane->normal().cast<scalar_t>();
+      vector3_t A = point_cross * current_state.get_rotation().matrix().transpose() * plane->normal().cast<scalar_t>();
       residual->H_row << A(0), A(1), A(2), plane->normal()(0), plane->normal()(1), plane->normal()(2);
       return residual;
     } else return nullptr;
@@ -214,10 +214,10 @@ void Lio::optimize() {
   
   auto t_start = std::chrono::steady_clock::now();
   
-  auto raw_points = lidar->get_pointcloud();
-  auto projected_undistorted_points = undistorted_pointcloud(raw_points);
-
   state_t propagated_state = get_state();
+  auto raw_points = lidar->get_pointcloud();
+  auto projected_undistorted_points = undistorted_pointcloud(propagated_state, raw_points);
+
   state_t updated_state = propagated_state;
   for (int i = 0; i < lio_max_iter; i++) {
     auto world_points = transform_pointcloud_to_world_frame(
@@ -229,7 +229,7 @@ void Lio::optimize() {
     for (int i = 0; i < world_points.points.size(); i++) {
       auto plane = voxel_tree->GetPlane(world_points.points[i]);
       if (plane) {
-        auto residual = build_residual(world_points.points[i], projected_undistorted_points.points[i], plane);
+        auto residual = build_residual(updated_state, world_points.points[i], projected_undistorted_points.points[i], plane);
         if (!residual) continue;
         residuals.push_back(residual);
         valid_observation++;

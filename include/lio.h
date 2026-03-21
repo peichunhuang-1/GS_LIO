@@ -56,10 +56,10 @@ class Lio: public estimator, public rclcpp::Node
 
     bool try_initialize();
 
-    pcl::PointCloud<pcl::PointXYZITC> undistorted_pointcloud(const std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> &raw_pointcloud);
+    pcl::PointCloud<pcl::PointXYZITC> undistorted_pointcloud(const state_t& current_state, const std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> &raw_pointcloud);
     pcl::PointCloud<pcl::PointXYZITC> transform_pointcloud_to_world_frame(const pcl::PointCloud<pcl::PointXYZITC> &pointcloud, const state_t &state);
     
-    std::shared_ptr<Residual> build_residual(const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane);
+    std::shared_ptr<Residual> build_residual(const state_t& current_state, const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane);
     vector18_t ieskf(const std::vector<std::shared_ptr<Residual>> &residuals, const vector18_t &error_state);
 
     std::thread build_map_thread;
