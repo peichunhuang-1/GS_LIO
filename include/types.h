@@ -23,6 +23,8 @@ using vector2_t = Eigen::Matrix<scalar_t, 2, 1>;
 using vector3_t = Eigen::Matrix<scalar_t, 3, 1>;
 using vector4_t = Eigen::Matrix<scalar_t, 4, 1>;
 using vector6_t = Eigen::Matrix<scalar_t, 6, 1>;
+using vector12_t = Eigen::Matrix<scalar_t, 12, 1>;
+using vector18_t = Eigen::Matrix<scalar_t, 18, 1>;
 
 using vector2c_t = Eigen::Matrix<std::complex<scalar_t>, 2, 1>;
 using vector3c_t = Eigen::Matrix<std::complex<scalar_t>, 3, 1>;
@@ -31,6 +33,7 @@ using matrix2_t = Eigen::Matrix<scalar_t, 2, 2>;
 using matrix3_t = Eigen::Matrix<scalar_t, 3, 3>;
 using matrix4_t = Eigen::Matrix<scalar_t, 4, 4>;
 using matrix6_t = Eigen::Matrix<scalar_t, 6, 6>;
+using matrix18_t = Eigen::Matrix<scalar_t, 18, 18>;
 
 using matrix32_t = Eigen::Matrix<scalar_t, 3, 2>;
 

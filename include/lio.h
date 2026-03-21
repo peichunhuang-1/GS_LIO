@@ -38,9 +38,9 @@ class Lio: public estimator, public rclcpp::Node
     bool is_init() {return current_status == INITIALED;}
   private:
     std::atomic<status> current_status = IDLE;
-    matrix_t G = matrix_t::Identity(18, 18);
-    matrix_t H_T_H = matrix_t::Identity(18, 18);
-    matrix_t I_STATE = matrix_t::Identity(18, 18);
+    matrix18_t G = matrix18_t::Identity();
+    matrix18_t H_T_H = matrix18_t::Identity();
+    matrix18_t I_STATE = matrix18_t::Identity();
 
     // project lidar frame to imu frame
     vector3_t lidar_imu_extrinsic_translation = vector3_t::Zero();
@@ -60,7 +60,7 @@ class Lio: public estimator, public rclcpp::Node
     pcl::PointCloud<pcl::PointXYZITC> transform_pointcloud_to_world_frame(const pcl::PointCloud<pcl::PointXYZITC> &pointcloud, const state_t &state);
     
     std::shared_ptr<Residual> build_residual(const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane);
-    vector_t ieskf(const std::vector<std::shared_ptr<Residual>> &residuals, const vector_t &error_state);
+    vector18_t ieskf(const std::vector<std::shared_ptr<Residual>> &residuals, const vector18_t &error_state);
 
     std::thread build_map_thread;
     std::shared_ptr<VoxelOctoTree> voxel_tree;

@@ -21,9 +21,9 @@ private:
   state_t forward_impl(const state_t &state, sensor_msgs::msg::Imu::ConstSharedPtr msg, const stamp_t &tailstamp);
   std::shared_ptr<std::shared_mutex> mtx;
   std::deque<sensor_msgs::msg::Imu::ConstSharedPtr> buffer;
-  std::condition_variable cv;
+  std::condition_variable_any cv;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub;
-  vector_t measure_noise = vector_t::Zero(12);
+  vector12_t measure_noise = vector_t::Zero(12);
 };
 
 }

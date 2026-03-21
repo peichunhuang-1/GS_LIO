@@ -18,7 +18,7 @@ public:
   virtual scalar_t d() const { return 0; }
   virtual scalar_t radius() const { return 0; }
   virtual matrix3_t covariance() const { return matrix3_t::Zero(); }
-  virtual matrix_t uncertainty() const { return matrix_t::Zero(6, 6); }
+  virtual matrix6_t uncertainty() const { return matrix6_t::Zero(6, 6); }
   virtual int point_num() const { return INT_MAX; }
   virtual void insert_point(const pcl::PointXYZITC &point) {}
   virtual void update() {}
@@ -58,11 +58,10 @@ public:
   virtual scalar_t d() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return d_; }
   virtual scalar_t radius() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return radius_; }
   virtual matrix3_t covariance() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return covariance_; }
-  virtual matrix_t uncertainty() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
+  virtual matrix6_t uncertainty() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
   virtual int point_num() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return point_num_; }
 private:
   std::shared_ptr<std::shared_mutex> mtx;
-  pcl::PointCloud<pcl::PointXYZITC> points; // tmp
   bool is_valid_ = false;
   int point_num_ = 0;
   vector3_t normal_;
@@ -83,7 +82,7 @@ private:
   matrix3_t pyy_covariance_ = matrix3_t::Zero();
   matrix3_t pyz_covariance_ = matrix3_t::Zero();
   matrix3_t pzz_covariance_ = matrix3_t::Zero();
-  matrix_t uncertainty_ = matrix_t::Identity(6, 6);
+  matrix6_t uncertainty_ = matrix_t::Identity(6, 6);
 };
 
 }

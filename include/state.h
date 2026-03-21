@@ -15,7 +15,7 @@ public:
           const vector3_t& angular_bias, 
           const vector3_t& linear_bias, 
           const vector3_t& gravity, 
-          const matrix_t& covariance)
+          const matrix18_t& covariance)
     : timestamp(stamp), transform(transform), linear_velocity(linear_velocity), angular_bias(angular_bias), linear_bias(linear_bias), gravity(gravity), covariance(covariance) {}
   state_t(const stamp_t stamp, 
           const matrix3_t& rotation, 
@@ -24,7 +24,7 @@ public:
           const vector3_t& angular_bias, 
           const vector3_t& linear_bias, 
           const vector3_t& gravity, 
-          const matrix_t& covariance)
+          const matrix18_t& covariance)
     : timestamp(stamp), transform(rotation, translation), linear_velocity(linear_velocity), angular_bias(angular_bias), linear_bias(linear_bias), gravity(gravity), covariance(covariance) {}
   state_t(const stamp_t stamp, 
           const quaternion_t& rotation, 
@@ -33,7 +33,7 @@ public:
           const vector3_t& angular_bias, 
           const vector3_t& linear_bias, 
           const vector3_t& gravity, 
-          const matrix_t& covariance)
+          const matrix18_t& covariance)
     : timestamp(stamp), transform(rotation, translation), linear_velocity(linear_velocity), angular_bias(angular_bias), linear_bias(linear_bias), gravity(gravity), covariance(covariance) {}
   state_t(const stamp_t stamp,
           const so3_t& rotation,
@@ -42,7 +42,7 @@ public:
           const vector3_t& angular_bias,
           const vector3_t& linear_bias,
           const vector3_t& gravity,
-          const matrix_t& covariance)
+          const matrix18_t& covariance)
     : timestamp(stamp), transform(rotation, translation), linear_velocity(linear_velocity), angular_bias(angular_bias), linear_bias(linear_bias), gravity(gravity), covariance(covariance) {}
   state_t(const stamp_t stamp, 
           const vector3_t& rotation, 
@@ -51,15 +51,15 @@ public:
           const vector3_t& angular_bias, 
           const vector3_t& linear_bias, 
           const vector3_t& gravity, 
-          const matrix_t& covariance)
+          const matrix18_t& covariance)
     : timestamp(stamp), transform(so3_t::exp(rotation), translation), linear_velocity(linear_velocity), angular_bias(angular_bias), linear_bias(linear_bias), gravity(gravity), covariance(covariance) {}
   state_t(const state_t& other);
   ~state_t() = default;
   // operators
   state_t& operator=(const state_t& other);
-  state_t operator+=(const vector_t& delta);
-  state_t operator-=(const vector_t& delta);
-  vector_t operator-(const state_t& other) const;
+  state_t operator+=(const vector18_t& delta);
+  state_t operator-=(const vector18_t& delta);
+  vector18_t operator-(const state_t& other) const;
   // getters
   stamp_t get_timestamp() const {return timestamp;}
   se3_t get_transform() const {return transform;}
@@ -71,10 +71,10 @@ public:
   vector3_t get_gravity() const {return gravity;}
   vector3_t get_imu_acceleration() const {return imu_acceleration;}
   vector3_t get_imu_angular_velocity() const {return imu_angular_velocity;}
-  matrix_t get_covariance() const {return covariance;}
-  vector_t to_vector() const
+  matrix18_t get_covariance() const {return covariance;}
+  vector18_t to_vector() const
   {
-    vector_t state_vector(18);
+    vector18_t state_vector;
     state_vector.segment<3>(0) = transform.so3().log();
     state_vector.segment<3>(3) = transform.translation();
     state_vector.segment<3>(6) = linear_velocity;
@@ -94,7 +94,7 @@ public:
   void set_gravity(const vector3_t& gravity) {this->gravity = gravity;}
   void set_imu_acceleration(const vector3_t& imu_acceleration) {this->imu_acceleration = imu_acceleration;}
   void set_imu_angular_velocity(const vector3_t& imu_angular_velocity) {this->imu_angular_velocity = imu_angular_velocity;}
-  void set_covariance(const matrix_t& covariance) {this->covariance = covariance;}
+  void set_covariance(const matrix18_t& covariance) {this->covariance = covariance;}
 
 
   state_t slerp(const stamp_t &tailstamp) const;
@@ -110,7 +110,7 @@ private:
   vector3_t angular_bias;
   vector3_t linear_bias;
   vector3_t gravity = vector3_t(0.0, 0.0, -GRAVITY_CONSTANT);
-  matrix_t covariance = 0.01 * matrix_t::Identity(18, 18);
+  matrix18_t covariance = 0.01 * matrix_t::Identity(18, 18);
   // inertial measurements
   vector3_t imu_acceleration;
   vector3_t imu_angular_velocity;

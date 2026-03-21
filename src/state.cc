@@ -24,7 +24,7 @@ state_t state_t::slerp(const stamp_t &tailstamp) const {
                                  get_angular_bias(), 
                                  get_linear_bias(), 
                                  get_gravity(), 
-                                 matrix3_t::Identity());
+                                 matrix18_t::Identity());
   return state_forwarded;
 }
 
@@ -54,7 +54,7 @@ state_t& state_t::operator=(const state_t& other)
   return *this;
 }
 
-state_t state_t::operator+=(const vector_t& delta)
+state_t state_t::operator+=(const vector18_t& delta)
 {
   this->transform.so3() = this->transform.so3() * so3_t::exp(delta.segment<3>(0).eval());
   this->transform.translation() += delta.segment<3>(3);
@@ -66,7 +66,7 @@ state_t state_t::operator+=(const vector_t& delta)
   return *this;
 }
 
-state_t state_t::operator-=(const vector_t& delta)
+state_t state_t::operator-=(const vector18_t& delta)
 {
   this->transform.so3() = so3_t::exp(delta.segment<3>(0).eval()).inverse() * this->transform.so3();
   this->transform.translation() -= delta.segment<3>(3);
@@ -78,9 +78,9 @@ state_t state_t::operator-=(const vector_t& delta)
   return *this;
 }
 
-vector_t state_t::operator-(const state_t& other) const
+vector18_t state_t::operator-(const state_t& other) const
 {
-  vector_t delta(18);
+  vector18_t delta;
   delta.segment<3>(0) = (other.transform.so3().inverse() * transform.so3()).log();
   delta.segment<3>(3) = transform.translation() - other.transform.translation();
   delta.segment<3>(6) = linear_velocity - other.linear_velocity;

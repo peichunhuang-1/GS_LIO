@@ -181,8 +181,8 @@ std::shared_ptr<Residual> Lio::build_residual(const pcl::PointXYZITC &pw, const 
   } else return nullptr;
 }
 
-vector_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals, 
-   const vector_t &error_state){
+vector18_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals, 
+                    const vector18_t &error_state){
   G.setZero();
   H_T_H.setZero();
   I_STATE.setIdentity();
@@ -202,7 +202,7 @@ vector_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals,
   Eigen::Matrix<scalar_t, 6, 1> H_T_measurements;
   H_T_measurements.noalias() = H_T_residual_inv * measurements;
   H_T_H.block<6, 6>(0, 0) = H_T_residual_inv * H;
-  Eigen::Matrix<scalar_t, 18, 18> K;
+  matrix18_t K;
   K.noalias() = (H_T_H.block<18, 18>(0, 0) + get_state().get_covariance().block<18, 18>(0, 0).inverse()).inverse();
   G.block<18, 6>(0, 0) = K.block<18, 6>(0, 0) * H_T_H.block<6, 6>(0, 0);
   return K.block<18, 6>(0, 0) * H_T_measurements + error_state.segment<18>(0) - G.block<18, 6>(0, 0) * error_state.segment<6>(0);
@@ -210,10 +210,13 @@ vector_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals,
 
 
 void Lio::optimize() {
-  RCLCPP_INFO(this->get_logger(), "start optimize");
   if (!try_initialize()) return;
+  
+  auto t_start = std::chrono::steady_clock::now();
+  
   auto raw_points = lidar->get_pointcloud();
   auto projected_undistorted_points = undistorted_pointcloud(raw_points);
+
   state_t propagated_state = get_state();
   state_t updated_state = propagated_state;
   for (int i = 0; i < lio_max_iter; i++) {
@@ -237,8 +240,8 @@ void Lio::optimize() {
       propagated_queue.clear();
       return;
     }
-    vector_t error_state = propagated_state - updated_state;
-    vector_t compensated_state = ieskf(residuals, error_state);
+    vector18_t error_state = propagated_state - updated_state;
+    vector18_t compensated_state = ieskf(residuals, error_state);
 
     updated_state += compensated_state;
     set_state(updated_state); // sync the state with optimal state
@@ -261,11 +264,15 @@ void Lio::optimize() {
     this->voxel_tree->UpdateVoxelOctoTree(world_points);
   });
   propagated_queue.clear();
-  RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
-    get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
-    get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
-    get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z()
-  );
+
+  auto t_end = std::chrono::steady_clock::now();
+  double ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+  RCLCPP_INFO(this->get_logger(), "elapse time: %.3f ms", ms);
+  // RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
+  //   get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
+  //   get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
+  //   get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z()
+  // );
 }
 
 void Lio::reset(const state_t &state) 
@@ -288,7 +295,7 @@ stamp_t Lio::wait_lidar(int timeout_ms)
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::executors::SingleThreadedExecutor executor;
+  rclcpp::executors::MultiThreadedExecutor executor;
   auto imu_node = std::make_shared<gs_lio::Imu>();
   auto lio_node = std::make_shared<gs_lio::Lio>();
   executor.add_node(imu_node);
