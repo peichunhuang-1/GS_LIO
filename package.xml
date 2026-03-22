@@ -7,7 +7,7 @@
 
   <maintainer email="peichun.huang@deltaww.com">pei chun huang</maintainer>
   <author email="peichun.huang@deltaww.com">pei chun huang</author>
-  <license>MIT</license>
+  <license>GPLv2</license>
 
   <!-- build tool -->
   <buildtool_depend>ament_cmake</buildtool_depend>
