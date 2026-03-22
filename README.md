@@ -59,3 +59,12 @@ TODO:
 1. 修改掉速度反而更慢的問題：我是覺得應該要比較快或持平才對，之前寫過一版LIVO是基本持平，但因為偷掉了平面計算的遍歷每個點的部分，我倒是有在這個專案試過如果用舊的平面計算方法只會更慢，所以應該是哪裡可以優化寫法而不是算法的問題．
 2. 純粹的高斯搬遷到c++：如題，就是搬運GS到c++上，我的理想模型是想用triangle-splatting，目前完成到可以渲染train完的模型並計算反向傳播了．
 3. GS-SLAM的部分：還在詳讀代碼跟文章，目前是覺得GS-SLAM裡面的深度那些的可以用lidar點應該問題不大，WildGS-SLAM主要是看上了他的那個不確定性更新，最後是希望可以跟GS-LIVO一樣realtime跑在嵌入式裝置，但應該還有漫漫長路．
+
+參考專案
+---
+1. https://github.com/hku-mars/FAST-LIVO2.git
+2. https://github.com/HKUST-Aerial-Robotics/GS-LIVO.git
+3. https://github.com/trianglesplatting/triangle-splatting.git
+4. https://github.com/GradientSpaces/WildGS-SLAM.git
+5. https://github.com/yanchi-3dv/diff-gaussian-rasterization-for-gsslam.git
+6. https://github.com/graphdeco-inria/gaussian-splatting.git
