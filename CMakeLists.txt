@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.22)
+cmake_policy(SET CMP0069 NEW)
 project(gs-lio)
 
 if(NOT CMAKE_CXX_STANDARD)
@@ -6,6 +7,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION "ON")
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64|armv7|armv8")
   set(IS_ARM TRUE)

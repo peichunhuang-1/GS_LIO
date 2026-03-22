@@ -3,7 +3,7 @@
 namespace gs_lio
 {
 
-Imu::Imu() : estimator(), rclcpp::Node("gs_lio_imu_node"), mtx(std::make_shared<std::shared_mutex>())
+Imu::Imu(const std::string & name) : estimator(), rclcpp::Node(name), mtx(std::make_shared<std::shared_mutex>())
 {
   std::string imu_topic;
   this->declare_parameter<std::string>("imu.topic", "/livox/imu");
@@ -19,6 +19,21 @@ Imu::~Imu()
 {
   sub.reset();
   buffer.clear();
+}
+
+stamp_t Imu::wait_imu(int timeout_ms)
+{
+  std::unique_lock<std::shared_mutex> lock(*mtx);
+  if (timeout_ms >= 0)
+  {
+    auto status = cv.wait_for(lock, std::chrono::milliseconds(timeout_ms));
+    if (status == std::cv_status::timeout) {
+      return -1;
+    }
+    else return stamp_to_sec(buffer.back()->header.stamp);
+  }  
+  cv.wait(lock);
+  return stamp_to_sec(buffer.back()->header.stamp);
 }
 
 void Imu::imu_cb(const sensor_msgs::msg::Imu::SharedPtr msg)
@@ -59,10 +74,15 @@ bool Imu::forward(const stamp_t &tailstamp)
   forward state to tailstamp and return true, 
   or buffer.front()->header.stamp if tailstamp is later than buffer.front()->header.stamp and return false.
   */
-  if (buffer.empty()) return false;
+  if (buffer.empty()) {
+    lock.unlock();
+    if (wait_imu(10) < 0) return false;
+    lock.lock();
+  }
   bool ret = stamp_to_sec(buffer.front()->header.stamp) < tailstamp? false: true;
   stamp_t forward_tailstamp = std::min(tailstamp, stamp_to_sec(buffer.front()->header.stamp));
   set_state(forward_impl(get_state(), buffer.front(), forward_tailstamp));
+  propagated_queue.push_back(get_state());
   buffer.pop_front();
   return ret;
 }

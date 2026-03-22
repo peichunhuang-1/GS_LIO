@@ -77,7 +77,7 @@ void Voxel::UpdateVoxel()
   else if (!valid_before_update && plane->is_valid()) VoxelOctoTree::VALID_PLANE_NUM++;
 }
 
-std::shared_ptr<Plane> Voxel::GetPlaneIter(const pcl::PointXYZITC &point)
+std::shared_ptr<PlaneImpl> Voxel::GetPlaneIter(const pcl::PointXYZITC &point)
 {
   const Voxel* current = this;
   while (true) {
@@ -103,10 +103,10 @@ VoxelOctoTree::VoxelOctoTree(rclcpp::Node &node) : clock_(RCL_ROS_TIME)
   node.declare_parameter<int>("voxel.lru_max_voxel_num", 70000);
   node.get_parameter_or<int>("voxel.lru_max_voxel_num", VoxelOctoTree::LRU_MAX_VOXEL_NUM, 70000);
   grids = std::make_shared<LRUCache<VOXEL_LOCATION, Voxel>>(VoxelOctoTree::LRU_MAX_VOXEL_NUM);
-  node.declare_parameter<int>("voxel.max_point_num", 250);
-  node.get_parameter_or<int>("voxel.max_point_num", Voxel::MAX_POINT_NUM, 250);
-  node.declare_parameter<int>("voxel.max_layer", 4);
-  node.get_parameter_or<int>("voxel.max_layer", Voxel::MAX_LAYER, 4);
+  node.declare_parameter<int>("voxel.max_point_num", 120);
+  node.get_parameter_or<int>("voxel.max_point_num", Voxel::MAX_POINT_NUM, 120);
+  node.declare_parameter<int>("voxel.max_layer", 2);
+  node.get_parameter_or<int>("voxel.max_layer", Voxel::MAX_LAYER, 2);
   node.declare_parameter<scalar_t>("voxel.basic_voxel_size", 0.5);
   node.get_parameter_or<scalar_t>("voxel.basic_voxel_size", Voxel::BASIC_VOXEL_SIZE, 0.5);
 
@@ -208,7 +208,7 @@ VOXEL_LOCATION VoxelOctoTree::get_near(const VOXEL_LOCATION &basic_voxel_locatio
   return near_voxel_location;
 }
 
-std::shared_ptr<Plane> VoxelOctoTree::GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel)
+std::shared_ptr<PlaneImpl> VoxelOctoTree::GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel)
 {
   std::shared_lock<std::shared_mutex> lock(*operation_mtx);
   VOXEL_LOCATION basic_voxel_location = get_hash(point_world);

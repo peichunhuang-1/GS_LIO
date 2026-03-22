@@ -3,7 +3,7 @@
 namespace gs_lio
 {
   
-Lio::Lio() : estimator(), rclcpp::Node("gs_lio_node")
+Lio::Lio(const std::string &name) : Imu(name)
 {
   std::string lidar_plugin_name = "livox";
   this->declare_parameter<std::string>("lio.lidar_plugin_name", "livox");
@@ -32,12 +32,6 @@ Lio::Lio() : estimator(), rclcpp::Node("gs_lio_node")
 Lio::~Lio()
 {
   if (build_map_thread.joinable()) build_map_thread.join();
-}
-
-bool Lio::forward(const stamp_t &tailstamp)
-{
-  if (tailstamp > 0) propagated_queue.push_back(get_state());
-  return true;
 }
 
 bool Lio::try_initialize() 
@@ -98,6 +92,7 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::undistorted_pointcloud(const state_t &cur
   projected_undistorted_pointcloud.points.reserve(raw_pointcloud->points.size());
   state_t cptr = propagated_queue.front();
   int point_index = 0;
+  static matrix3_t lidar_imu_extrinsic_orientation_matrix = lidar_imu_extrinsic_orientation.toRotationMatrix();
   while (point_index < raw_pointcloud->points.size()) {
     propagated_queue.pop_front();
     if (propagated_queue.empty()) break;
@@ -115,7 +110,7 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::undistorted_pointcloud(const state_t &cur
       vector3_t projected_point = current_state.measurement_project(
         measured_state,
         p.xyz().cast<scalar_t>(),
-        lidar_imu_extrinsic_orientation.toRotationMatrix(),
+        lidar_imu_extrinsic_orientation_matrix,
         lidar_imu_extrinsic_translation
       );
       pcl::PointXYZITC projected_point_with_cov;
@@ -137,11 +132,12 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::transform_pointcloud_to_world_frame(
   const state_t &state) {
   pcl::PointCloud<pcl::PointXYZITC> pointcloud_world;
   pointcloud_world.points.resize(pointcloud.points.size());
+  static matrix3_t lidar_imu_extrinsic_orientation_matrix = lidar_imu_extrinsic_orientation.toRotationMatrix();
   #pragma omp parallel for num_threads(8)
   for (int i = 0; i < pointcloud.points.size(); i++) {
     const auto &p = pointcloud.points[i];
     vector3_t p_lidar = p.xyz().cast<scalar_t>();
-    vector3_t p_body = lidar_imu_extrinsic_orientation.toRotationMatrix() * p_lidar + lidar_imu_extrinsic_translation;
+    vector3_t p_body = lidar_imu_extrinsic_orientation_matrix * p_lidar + lidar_imu_extrinsic_translation;
     vector3_t p_world = state.get_rotation() * p_body + state.get_translation();
     pcl::PointXYZITC &pw = pointcloud_world.points[i];
     pw.xyz() = p_world.cast<float>();
@@ -156,12 +152,13 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::transform_pointcloud_to_world_frame(
   return pointcloud_world;
 }
 
-std::shared_ptr<Residual> Lio::build_residual(const state_t& current_state, const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane) {
+std::shared_ptr<Residual> Lio::build_residual(const state_t& current_state, const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<PlaneImpl> &plane) {
   std::shared_ptr<Residual> residual = std::make_shared<Residual>();
   vector3_t point_to_center_vector = pw.xyz().cast<scalar_t>() - plane->center();
   scalar_t point_to_plane_distance = plane->normal().dot(pw.xyz().cast<scalar_t>()) + plane->d();
   scalar_t point_to_center_distance = point_to_center_vector.norm();
   scalar_t range_distance = sqrt(point_to_center_distance * point_to_center_distance - point_to_plane_distance * point_to_plane_distance);
+  static matrix3_t lidar_imu_extrinsic_orientation_matrix = lidar_imu_extrinsic_orientation.toRotationMatrix();
   if (range_distance <= static_cast<scalar_t>(radius_sigma_num * plane->radius())) {
     matrix_t<1, 6> J_nq;
     J_nq.block<1, 3>(0, 0) = point_to_center_vector;
@@ -172,7 +169,7 @@ std::shared_ptr<Residual> Lio::build_residual(const state_t& current_state, cons
       residual->distance_to_plane = static_cast<scalar_t>(point_to_plane_distance);
       residual->residual = 1e-3 + static_cast<scalar_t>(res);
       vector3_t p_lidar = pl.xyz().cast<scalar_t>();
-      vector3_t p_body = lidar_imu_extrinsic_orientation.toRotationMatrix() * p_lidar + lidar_imu_extrinsic_translation;
+      vector3_t p_body = lidar_imu_extrinsic_orientation_matrix * p_lidar + lidar_imu_extrinsic_translation;
       matrix3_t point_cross = Sophus::SO3<scalar_t>::hat(p_body);
       vector3_t A = point_cross * current_state.get_rotation().matrix().transpose() * plane->normal().cast<scalar_t>();
       residual->H_row << A(0), A(1), A(2), plane->normal()(0), plane->normal()(1), plane->normal()(2);
@@ -212,8 +209,6 @@ vector18_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals,
 void Lio::optimize() {
   if (!try_initialize()) return;
   
-  auto t_start = std::chrono::steady_clock::now();
-  
   state_t propagated_state = get_state();
   auto raw_points = lidar->get_pointcloud();
   auto projected_undistorted_points = undistorted_pointcloud(propagated_state, raw_points);
@@ -240,6 +235,7 @@ void Lio::optimize() {
       propagated_queue.clear();
       return;
     }
+
     vector18_t error_state = propagated_state - updated_state;
     vector18_t compensated_state = ieskf(residuals, error_state);
 
@@ -264,15 +260,6 @@ void Lio::optimize() {
     this->voxel_tree->UpdateVoxelOctoTree(world_points);
   });
   propagated_queue.clear();
-
-  auto t_end = std::chrono::steady_clock::now();
-  double ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
-  RCLCPP_INFO(this->get_logger(), "elapse time: %.3f ms", ms);
-  // RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
-  //   get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
-  //   get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
-  //   get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z()
-  // );
 }
 
 void Lio::reset(const state_t &state) 
@@ -295,26 +282,22 @@ stamp_t Lio::wait_lidar(int timeout_ms)
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::executors::MultiThreadedExecutor executor;
-  auto imu_node = std::make_shared<gs_lio::Imu>();
-  auto lio_node = std::make_shared<gs_lio::Lio>();
-  executor.add_node(imu_node);
-  executor.add_node(lio_node);
-  auto thread_ = std::thread([imu_node, lio_node](){
+  auto lio_node = std::make_shared<gs_lio::Lio>("lio_node");
+  auto thread_ = std::thread([lio_node](){
     while (rclcpp::ok())
     {
       auto tailstamp = lio_node->wait_lidar();
+      auto t_start = std::chrono::steady_clock::now();
       if (tailstamp < 0) continue;
       if (!lio_node->is_init()) tailstamp = -1;
-      while (!imu_node->forward(tailstamp) && tailstamp > 0)
-      {
-        lio_node->forward(tailstamp);
-      }
-      lio_node->forward(tailstamp);
+      while (!lio_node->forward(tailstamp) && tailstamp > 0) {}
       lio_node->optimize();
+      auto t_end = std::chrono::steady_clock::now();
+      double ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+      RCLCPP_INFO(lio_node->get_logger(), "elapse time: %.3f ms", ms);
     }
   });
-  executor.spin();
+  rclcpp::spin(lio_node);
   rclcpp::shutdown();
   return 0;
 }

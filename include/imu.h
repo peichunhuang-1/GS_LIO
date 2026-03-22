@@ -12,8 +12,9 @@ namespace gs_lio
 class Imu: public estimator, public rclcpp::Node
 {
 public:
-  Imu();
+  Imu(const std::string & name);
   ~Imu();
+  stamp_t wait_imu(int timeout_ms = 200);
   bool forward(const stamp_t &tailstamp) override;
   void reset(const state_t &state) override;
 private:

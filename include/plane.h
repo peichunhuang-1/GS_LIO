@@ -83,6 +83,7 @@ private:
   matrix3_t pyz_covariance_ = matrix3_t::Zero();
   matrix3_t pzz_covariance_ = matrix3_t::Zero();
   matrix6_t uncertainty_ = matrix6_t::Identity();
+
 };
 
 }

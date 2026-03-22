@@ -47,7 +47,7 @@ class Voxel: public std::enable_shared_from_this<Voxel>
                                                           nullptr, nullptr, nullptr, nullptr};
     void UpdateVoxel();
     std::shared_ptr<Voxel> InsertPoint(const pcl::PointXYZITC &point_world);
-    std::shared_ptr<Plane> GetPlaneIter(const pcl::PointXYZITC &point);
+    std::shared_ptr<PlaneImpl> GetPlaneIter(const pcl::PointXYZITC &point);
 };
 
 class VoxelOctoTree
@@ -58,7 +58,7 @@ class VoxelOctoTree
     VoxelOctoTree(rclcpp::Node &node);
     ~VoxelOctoTree();
     void UpdateVoxelOctoTree(const pcl::PointCloud<pcl::PointXYZITC> &points_world);
-    std::shared_ptr<Plane> GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel = true);
+    std::shared_ptr<PlaneImpl> GetPlane(const pcl::PointXYZITC &point_world, bool get_near_voxel = true);
   private:
     std::shared_ptr<std::shared_mutex> operation_mtx;
     std::vector<std::shared_ptr<Voxel>> update_voxels_vector;

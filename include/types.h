@@ -5,12 +5,13 @@
 #include <Eigen/Dense>
 #include <sophus/se3.hpp>
 #include <sophus/so3.hpp>
+#include <mimalloc.h>
 
 #define GRAVITY_CONSTANT 9.81
 
 namespace gs_lio
 {
-using scalar_t = float;
+using scalar_t = double;
 using stamp_t = double;
 
 #define pi_t static_cast<scalar_t>(std::acos(-1.0));

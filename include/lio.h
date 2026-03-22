@@ -3,7 +3,7 @@
 
 #include "lidar_plugin.h"
 #include "voxel.h"
-#include "estimator.h"
+#include "imu.h"
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
@@ -20,7 +20,7 @@ class Residual
     Eigen::RowVector<scalar_t, 6> H_row;
 };
 
-class Lio: public estimator, public rclcpp::Node
+class Lio: public Imu
 {
   enum status
   {
@@ -29,9 +29,8 @@ class Lio: public estimator, public rclcpp::Node
     INITIALED,
   };
   public:
-    Lio();
+    Lio(const std::string &name);
     ~Lio();
-    bool forward(const stamp_t &tailstamp) override;
     void optimize() override;
     void reset(const state_t &state) override;
     stamp_t wait_lidar(int timeout_ms = 200);
@@ -59,7 +58,7 @@ class Lio: public estimator, public rclcpp::Node
     pcl::PointCloud<pcl::PointXYZITC> undistorted_pointcloud(const state_t& current_state, const std::shared_ptr<pcl::PointCloud<pcl::PointXYZIT>> &raw_pointcloud);
     pcl::PointCloud<pcl::PointXYZITC> transform_pointcloud_to_world_frame(const pcl::PointCloud<pcl::PointXYZITC> &pointcloud, const state_t &state);
     
-    std::shared_ptr<Residual> build_residual(const state_t& current_state, const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<Plane> &plane);
+    std::shared_ptr<Residual> build_residual(const state_t& current_state, const pcl::PointXYZITC &pw, const pcl::PointXYZITC &pl, const std::shared_ptr<PlaneImpl> &plane);
     vector18_t ieskf(const std::vector<std::shared_ptr<Residual>> &residuals, const vector18_t &error_state);
 
     std::thread build_map_thread;
