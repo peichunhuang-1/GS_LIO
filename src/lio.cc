@@ -160,7 +160,7 @@ std::shared_ptr<Residual> Lio::build_residual(const state_t& current_state, cons
   scalar_t range_distance = sqrt(point_to_center_distance * point_to_center_distance - point_to_plane_distance * point_to_plane_distance);
   static matrix3_t lidar_imu_extrinsic_orientation_matrix = lidar_imu_extrinsic_orientation.toRotationMatrix();
   if (range_distance <= static_cast<scalar_t>(radius_sigma_num * plane->radius())) {
-    matrix_t<1, 6> J_nq;
+    static matrix_t<1, 6> J_nq;
     J_nq.block<1, 3>(0, 0) = point_to_center_vector;
     J_nq.block<1, 3>(0, 3) = -plane->normal();
     scalar_t res = (J_nq * plane->uncertainty() * J_nq.transpose()).value();
@@ -199,7 +199,7 @@ vector18_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals,
   Eigen::Matrix<scalar_t, 6, 1> H_T_measurements;
   H_T_measurements.noalias() = H_T_residual_inv * measurements;
   H_T_H.block<6, 6>(0, 0) = H_T_residual_inv * H;
-  matrix18_t K;
+  static matrix18_t K;
   K.noalias() = (H_T_H.block<18, 18>(0, 0) + get_state().get_covariance().block<18, 18>(0, 0).inverse()).inverse();
   G.block<18, 6>(0, 0) = K.block<18, 6>(0, 0) * H_T_H.block<6, 6>(0, 0);
   return K.block<18, 6>(0, 0) * H_T_measurements + error_state.segment<18>(0) - G.block<18, 6>(0, 0) * error_state.segment<6>(0);
@@ -236,8 +236,10 @@ void Lio::optimize() {
       return;
     }
 
-    vector18_t error_state = propagated_state - updated_state;
-    vector18_t compensated_state = ieskf(residuals, error_state);
+    static vector18_t error_state;
+    error_state = propagated_state - updated_state;
+    static vector18_t compensated_state;
+    compensated_state = ieskf(residuals, error_state);
 
     updated_state += compensated_state;
     set_state(updated_state); // sync the state with optimal state
@@ -260,6 +262,12 @@ void Lio::optimize() {
     this->voxel_tree->UpdateVoxelOctoTree(world_points);
   });
   propagated_queue.clear();
+
+  RCLCPP_INFO(this->get_logger(), "position: %f, %f, %f\t rotation: %f, %f, %f\t velocity: %f, %f, %f", 
+    get_state().get_translation().x(), get_state().get_translation().y(), get_state().get_translation().z(), 
+    get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
+    get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z()
+  );
 }
 
 void Lio::reset(const state_t &state) 
@@ -275,7 +283,7 @@ stamp_t Lio::wait_lidar(int timeout_ms)
   return lidar->wait_available(timeout_ms);
 }
 
-}
+} // namespace gs_lio
 
 #include "imu.h"
 

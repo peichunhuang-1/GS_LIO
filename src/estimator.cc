@@ -31,4 +31,4 @@ void estimator::set_state(const state_t &state)
   estimator::optimal_state = state;
 }
 
-}
+} // namespace gs_lio

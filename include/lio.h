@@ -69,6 +69,6 @@ class Lio: public Imu
     std::shared_ptr<tf2_ros::TransformListener> tf_listener;
 };
 
-}
+} // namespace gs_lio
 
 #endif

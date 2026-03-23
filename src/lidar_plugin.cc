@@ -77,4 +77,4 @@ std::unique_ptr<Lidar> LidarPluginFactory::create(const std::string& name, rclcp
   return nullptr;
 }
 
-}
+} // namespace gs_lio

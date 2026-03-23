@@ -41,7 +41,7 @@ class LidarPluginFactory
     std::unordered_map<std::string, Creator> creators_;
 };
 
-}
+} // namespace gs_lio
 
 #define REGISTER_LIDAR(NAME, TYPE)                                     \
 namespace gs_lio                                                       \
@@ -57,6 +57,6 @@ struct TYPE##Registrar {                                               \
     }                                                                  \
 };                                                                     \
 static TYPE##Registrar global_##TYPE##_registrar;                      \
-}
+} // namespace gs_lio
 
 #endif

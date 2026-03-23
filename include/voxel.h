@@ -74,7 +74,7 @@ class VoxelOctoTree
     std::shared_ptr<LRUCache<VOXEL_LOCATION, Voxel>> grids;
 };
 
-}
+} // namespace gs_lio
 
 namespace std
 {
@@ -88,6 +88,6 @@ template <> struct hash<VOXEL_LOCATION>
     return ((((s.z) * VOXELMAP_HASH_P) % VOXELMAP_MAX_N + (s.y)) * VOXELMAP_HASH_P) % VOXELMAP_MAX_N + (s.x);
   }
 };
-}
+} // namespace std
 
 #endif

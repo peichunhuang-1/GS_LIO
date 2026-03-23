@@ -58,7 +58,7 @@ inline rclcpp::Time sec_to_stamp(stamp_t timestamp)
 }
 inline stamp_t now_sec() {return rclcpp::Clock().now().seconds();}
 inline rclcpp::Time now_stamp() {return rclcpp::Clock().now();}
-}
+} // namespace gs_lio
 
 // point cloud types
 #include <pcl_conversions/pcl_conversions.h>
@@ -104,7 +104,7 @@ struct EIGEN_ALIGN16 PointXYZITC
     return Eigen::Map<const Eigen::Matrix3f>(covariance_data);
   }
 } EIGEN_ALIGN16;
-}
+} // namespace pcl
 
 POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointXYZIT,  
   (float, x, x)

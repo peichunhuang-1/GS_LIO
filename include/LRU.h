@@ -11,7 +11,10 @@ class LRUCache {
     std::unordered_map<Key, std::pair<std::shared_ptr<T>, typename std::list<Key>::iterator>> cache;
 
 public:
-    LRUCache(int capacity) : capacity(capacity) {order_mtx = std::make_shared<std::mutex>();}
+    LRUCache(int capacity) : capacity(capacity) {
+      order_mtx = std::make_shared<std::mutex>();
+      cache.reserve(capacity);
+    }
     void erase(const Key& key) {
       auto it = cache.find(key);
       if (it != cache.end()) {

@@ -116,6 +116,6 @@ private:
   vector3_t imu_angular_velocity;
 };
 
-}
+} // namespace gs_lio
 
 #endif

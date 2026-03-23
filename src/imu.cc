@@ -97,7 +97,7 @@ state_t Imu::forward_impl(const state_t & state, sensor_msgs::msg::Imu::ConstSha
   vector3_t mean_ang_vel = 0.5 * (ang_vel_tail + state.get_imu_angular_velocity()) - state.get_angular_bias();
   // propagate state
   matrix3_t mean_accel_skew = Sophus::SO3<scalar_t>::hat(mean_accel);
-  matrix18_t Fx = matrix18_t::Identity();
+  static matrix18_t Fx = matrix18_t::Identity();
   Fx.block<3, 3>(0, 0) = so3_t::exp(-mean_ang_vel * dt).matrix();
   Fx.block<3, 3>(0, 9) = -matrix3_t::Identity() * dt;
   Fx.block<3, 3>(3, 6) = matrix3_t::Identity() * dt;
@@ -105,13 +105,14 @@ state_t Imu::forward_impl(const state_t & state, sensor_msgs::msg::Imu::ConstSha
   Fx.block<3, 3>(6, 12) = -state.get_rotation().matrix() * dt;
   Fx.block<3, 3>(6, 15) = matrix3_t::Identity() * dt;
 
-  matrix18_t W = matrix18_t::Zero();
+  static matrix18_t W = matrix18_t::Zero();
   W.block<3, 3>(0, 0).diagonal() = measure_noise.segment<3>(0) * dt * dt;
   W.block<3, 3>(6, 6) = state.get_rotation().matrix() * measure_noise.segment<3>(3).asDiagonal() * state.get_rotation().matrix().transpose() * dt * dt;
   W.block<3, 3>(9, 9).diagonal() = measure_noise.segment<3>(6) * dt * dt;
   W.block<3, 3>(12, 12).diagonal() = measure_noise.segment<3>(9) * dt * dt;
 
-  matrix18_t tail_covariance = Fx * state.get_covariance() * Fx.transpose() + W;
+  static matrix18_t tail_covariance;
+  tail_covariance = Fx * state.get_covariance() * Fx.transpose() + W;
   so3_t dR = so3_t::exp(mean_ang_vel * dt);
   vector3_t accel_world = state.get_rotation().matrix() * mean_accel + state.get_gravity();
 
@@ -138,4 +139,4 @@ void Imu::reset(const state_t &state)
   estimator::reset(state);
 }
 
-}
+} // namespace gs_lio

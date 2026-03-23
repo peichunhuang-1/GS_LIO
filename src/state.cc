@@ -90,4 +90,4 @@ vector18_t state_t::operator-(const state_t& other) const
   return delta;
 }
 
-}
+} // namespace gs_lio

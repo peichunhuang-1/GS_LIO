@@ -88,19 +88,24 @@ void PlaneImpl::update()
   scalar_t v1xv3z_minus_v1zv3x = eigen_vec_min.x() * eigen_vec_max.z() - eigen_vec_min.z() * eigen_vec_max.x();
   scalar_t v1yv3z_minus_v1zv3y = eigen_vec_min.y() * eigen_vec_max.z() - eigen_vec_min.z() * eigen_vec_max.y();
 
-  matrix3_t Mx; Mx << 0, 0, 0, 
-                      0, -v1xv2y_minus_v1yv2x / n_x_l1_l2, -v1xv2z_minus_v1zv2x / n_x_l1_l2, 
-                      0, -v1xv3y_minus_v1yv3x / n_x_l1_l3, -v1xv3z_minus_v1zv3x / n_x_l1_l3;
-  matrix3_t My; My << 0, 0, 0,
-                       v1xv2y_minus_v1yv2x / n_x_l1_l2, 0, -v1yv2z_minus_v1zv2y / n_x_l1_l2, 
-                       v1xv3y_minus_v1yv3x / n_x_l1_l3, 0, -v1yv3z_minus_v1zv3y / n_x_l1_l3;
-  matrix3_t Mz; Mz << 0, 0, 0,
-                       v1xv2z_minus_v1zv2x / n_x_l1_l2, v1yv2z_minus_v1zv2y / n_x_l1_l2, 0, 
-                       v1xv3z_minus_v1zv3x / n_x_l1_l3, v1yv3z_minus_v1zv3y / n_x_l1_l3, 0;
-  matrix3_t C; C << 0, 0, 0,
-                    -(v1xv2y_minus_v1yv2x * center_.y() + v1xv2z_minus_v1zv2x * center_.z()) / n_x_l1_l2, (v1xv2y_minus_v1yv2x * center_.x() - v1yv2z_minus_v1zv2y * center_.z()) / n_x_l1_l2, (v1xv2z_minus_v1zv2x * center_.x() + v1yv2z_minus_v1zv2y * center_.y()) / n_x_l1_l2,
-                    -(v1xv3y_minus_v1yv3x * center_.y() + v1xv3z_minus_v1zv3x * center_.z()) / n_x_l1_l3, (v1xv3y_minus_v1yv3x * center_.x() - v1yv3z_minus_v1zv3y * center_.z()) / n_x_l1_l3, (v1xv3z_minus_v1zv3x * center_.x() + v1yv3z_minus_v1zv3y * center_.y()) / n_x_l1_l3;
-  matrix3_t V; V.col(0) = eigen_vec_min; V.col(1) = eigen_vec_mid; V.col(2) = eigen_vec_max;
+  static matrix3_t Mx; 
+  Mx << 0, 0, 0, 
+        0, -v1xv2y_minus_v1yv2x / n_x_l1_l2, -v1xv2z_minus_v1zv2x / n_x_l1_l2, 
+        0, -v1xv3y_minus_v1yv3x / n_x_l1_l3, -v1xv3z_minus_v1zv3x / n_x_l1_l3;
+  static matrix3_t My; 
+  My << 0, 0, 0,
+        v1xv2y_minus_v1yv2x / n_x_l1_l2, 0, -v1yv2z_minus_v1zv2y / n_x_l1_l2, 
+        v1xv3y_minus_v1yv3x / n_x_l1_l3, 0, -v1yv3z_minus_v1zv3y / n_x_l1_l3;
+  static matrix3_t Mz; 
+  Mz << 0, 0, 0,
+        v1xv2z_minus_v1zv2x / n_x_l1_l2, v1yv2z_minus_v1zv2y / n_x_l1_l2, 0, 
+        v1xv3z_minus_v1zv3x / n_x_l1_l3, v1yv3z_minus_v1zv3y / n_x_l1_l3, 0;
+  static matrix3_t C; 
+  C << 0, 0, 0,
+      -(v1xv2y_minus_v1yv2x * center_.y() + v1xv2z_minus_v1zv2x * center_.z()) / n_x_l1_l2, (v1xv2y_minus_v1yv2x * center_.x() - v1yv2z_minus_v1zv2y * center_.z()) / n_x_l1_l2, (v1xv2z_minus_v1zv2x * center_.x() + v1yv2z_minus_v1zv2y * center_.y()) / n_x_l1_l2,
+      -(v1xv3y_minus_v1yv3x * center_.y() + v1xv3z_minus_v1zv3x * center_.z()) / n_x_l1_l3, (v1xv3y_minus_v1yv3x * center_.x() - v1yv3z_minus_v1zv3y * center_.z()) / n_x_l1_l3, (v1xv3z_minus_v1zv3x * center_.x() + v1yv3z_minus_v1zv3y * center_.y()) / n_x_l1_l3;
+  static matrix3_t V; 
+  V.col(0) = eigen_vec_min; V.col(1) = eigen_vec_mid; V.col(2) = eigen_vec_max;
   // update uncertainty
   uncertainty_.block<3,3>(0, 0) = 
     V * Mx * pxx_covariance_ * Mx.transpose() * V.transpose() +
@@ -131,4 +136,4 @@ void PlaneImpl::update()
   d_ = -eigen_vec_min.dot(center_);
 }
 
-}
+} // namespace gs_lio

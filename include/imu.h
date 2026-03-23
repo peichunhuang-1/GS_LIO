@@ -27,6 +27,6 @@ private:
   vector12_t measure_noise = vector12_t::Zero();
 };
 
-}
+} // namespace gs_lio
 
 #endif

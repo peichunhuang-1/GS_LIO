@@ -180,7 +180,7 @@ void VoxelOctoTree::UpdateVoxelOctoTree(const pcl::PointCloud<pcl::PointXYZITC> 
     }
     auto update_voxel = grids->get(location)->InsertPoint(points_world.points[i]);
     if (update_voxel) update_voxels_vector.push_back(update_voxel);
-  }
+      }
   #pragma omp parallel for num_threads(20)
   for (int i = 0; i < static_cast<int>(update_voxels_vector.size()); ++i)
   {
@@ -221,4 +221,4 @@ std::shared_ptr<PlaneImpl> VoxelOctoTree::GetPlane(const pcl::PointXYZITC &point
   else return nullptr;
 }
 
-}
+} // namespace gs_lio

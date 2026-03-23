@@ -86,6 +86,6 @@ private:
 
 };
 
-}
+} // namespace gs_lio
 
 #endif
