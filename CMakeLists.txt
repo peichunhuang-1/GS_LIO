@@ -3,7 +3,7 @@ cmake_policy(SET CMP0069 NEW)
 project(gs-lio)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD 23)
 endif()
 
 set(CMAKE_BUILD_TYPE "Release")
@@ -20,15 +20,15 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_options(-O3)
   if(IS_ARM)
-    add_compile_options(-mcpu=cortex-a72)
-    message(STATUS "Using ARM optimization: -mcpu=cortex-a72")
+    add_compile_options(-march=armv8-a)
+    message(STATUS "Using ARM optimization: -march=armv8-a")
   else()
     add_compile_options(-march=native -mtune=native)
     message(STATUS "Using x86 optimization: -march=native")
   endif()
   add_compile_definitions(
     EIGEN_NO_DEBUG
-    EIGEN_DONT_ALIGN_STATICALLY
+    # EIGEN_DONT_ALIGN_STATICALLY
   )
 endif()
 

@@ -133,7 +133,7 @@ pcl::PointCloud<pcl::PointXYZITC> Lio::transform_pointcloud_to_world_frame(
   pcl::PointCloud<pcl::PointXYZITC> pointcloud_world;
   pointcloud_world.points.resize(pointcloud.points.size());
   static matrix3_t lidar_imu_extrinsic_orientation_matrix = lidar_imu_extrinsic_orientation.toRotationMatrix();
-  #pragma omp parallel for num_threads(8)
+  #pragma omp parallel for num_threads(8) schedule(static)
   for (int i = 0; i < pointcloud.points.size(); i++) {
     const auto &p = pointcloud.points[i];
     vector3_t p_lidar = p.xyz().cast<scalar_t>();
@@ -285,20 +285,19 @@ stamp_t Lio::wait_lidar(int timeout_ms)
 
 } // namespace gs_lio
 
-#include "imu.h"
-
 int main(int argc, char* argv[])
 {
+  mi_version();
   rclcpp::init(argc, argv);
   auto lio_node = std::make_shared<gs_lio::Lio>("lio_node");
   auto thread_ = std::thread([lio_node](){
     while (rclcpp::ok())
     {
       auto tailstamp = lio_node->wait_lidar();
-      auto t_start = std::chrono::steady_clock::now();
       if (tailstamp < 0) continue;
       if (!lio_node->is_init()) tailstamp = -1;
       while (!lio_node->forward(tailstamp) && tailstamp > 0) {}
+      auto t_start = std::chrono::steady_clock::now();
       lio_node->optimize();
       auto t_end = std::chrono::steady_clock::now();
       double ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
@@ -307,5 +306,6 @@ int main(int argc, char* argv[])
   });
   rclcpp::spin(lio_node);
   rclcpp::shutdown();
+  RCLCPP_INFO(lio_node->get_logger(), "Program end");
   return 0;
 }
