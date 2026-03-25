@@ -19,6 +19,7 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_options(-O3)
+  add_compile_options(-ftree-vectorize -fopt-info-vec-optimized)
   if(IS_ARM)
     add_compile_options(-march=armv8-a)
     message(STATUS "Using ARM optimization: -march=armv8-a")
@@ -28,7 +29,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   endif()
   add_compile_definitions(
     EIGEN_NO_DEBUG
-    # EIGEN_DONT_ALIGN_STATICALLY
+    EIGEN_VECTORIZE_SSE4_2
   )
 endif()
 
@@ -67,7 +68,7 @@ include_directories(
 # add_subdirectory(thirdparty)
 
 # Build state lib
-add_library(gs_lio_state 
+add_library(gs_lio_state STATIC
   src/state.cc
 )
 
@@ -84,7 +85,7 @@ target_link_libraries(gs_lio_state
 )
 
 # Build estimator lib
-add_library(gs_lio_estimator 
+add_library(gs_lio_estimator STATIC
   src/estimator.cc
 )
 
@@ -95,7 +96,7 @@ ament_target_dependencies(gs_lio_estimator
 target_link_libraries(gs_lio_estimator gs_lio_state)
 
 # Build imu lib
-add_library(gs_lio_imu 
+add_library(gs_lio_imu STATIC
   src/imu.cc
 )
 
@@ -107,7 +108,7 @@ ament_target_dependencies(gs_lio_imu
 target_link_libraries(gs_lio_imu gs_lio_estimator)
 
 # Build plane lib
-add_library(gs_lio_plane
+add_library(gs_lio_plane STATIC
   src/plane.cc
 )
 
@@ -124,7 +125,7 @@ ament_target_dependencies(gs_lio_plane
 )
 
 # Build voxel lib
-add_library(gs_lio_voxel
+add_library(gs_lio_voxel STATIC
   src/voxel.cc
 )
 
@@ -143,7 +144,7 @@ ament_target_dependencies(gs_lio_voxel
 )
 
 # Build lidar plugin lib
-add_library(gs_lio_lidar_plugin
+add_library(gs_lio_lidar_plugin STATIC
   src/lidar_plugin.cc
 )
 
@@ -163,7 +164,7 @@ ament_target_dependencies(gs_lio_lidar_plugin
 add_subdirectory(plugins)
 
 # Build lio lib
-add_library(gs_lio 
+add_library(gs_lio STATIC
   src/lio.cc
 )
 

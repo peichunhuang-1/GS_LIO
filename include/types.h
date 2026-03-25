@@ -65,7 +65,7 @@ inline rclcpp::Time now_stamp() {return rclcpp::Clock().now();}
 
 namespace pcl
 {
-struct PointXYZIT
+struct EIGEN_ALIGN16 PointXYZIT
 {
   PCL_ADD_POINT4D;                  // preferred way of adding a XYZ+padding
   float intensity;
