@@ -10,16 +10,16 @@ namespace gs_lio
 class Plane
 {
 public:
-  virtual bool is_valid() const { return false; }
-  virtual vector3_t normal() const { return vector3_t::Zero(); }
-  virtual vector3_t main_axis() const { return vector3_t::Zero(); }
-  virtual vector3_t secondary_axis() const { return vector3_t::Zero(); }
-  virtual vector3_t center() const { return vector3_t::Zero(); }
-  virtual scalar_t d() const { return 0; }
-  virtual scalar_t radius() const { return 0; }
-  virtual matrix3_t covariance() const { return matrix3_t::Zero(); }
-  virtual matrix6_t uncertainty() const { return matrix6_t::Zero(6, 6); }
-  virtual int point_num() const { return INT_MAX; }
+  virtual inline bool is_valid() const { return false; }
+  virtual inline vector3_t normal() const { return vector3_t::Zero(); }
+  virtual inline vector3_t main_axis() const { return vector3_t::Zero(); }
+  virtual inline vector3_t secondary_axis() const { return vector3_t::Zero(); }
+  virtual inline vector3_t center() const { return vector3_t::Zero(); }
+  virtual inline scalar_t d() const { return 0; }
+  virtual inline scalar_t radius() const { return 0; }
+  virtual inline matrix3_t covariance() const { return matrix3_t::Zero(); }
+  virtual inline matrix6_t uncertainty() const { return matrix6_t::Zero(6, 6); }
+  virtual inline int point_num() const { return INT_MAX; }
   virtual void insert_point(const pcl::PointXYZITC &point) {}
   virtual void update() {}
 };
@@ -30,7 +30,7 @@ public:
   static scalar_t PLANE_THRESHOLD;
   static int CONSTRUCT_THRESHOLD;
   // Default constructor
-  PlaneImpl() : is_valid_(false), mtx(std::make_shared<std::shared_mutex>()) {}
+  PlaneImpl() : is_valid_(false), mtx(std::make_shared<std::mutex>()) {}
   
   // Copy constructor
   PlaneImpl(const PlaneImpl& other)
@@ -43,25 +43,25 @@ public:
       d_(other.d_),
       radius_(other.radius_),
       is_valid_(other.is_valid_),
-      mtx(std::make_shared<std::shared_mutex>()) {}
+      mtx(std::make_shared<std::mutex>()) {}
   // Assignment operator
   PlaneImpl& operator=(const PlaneImpl& other);
   
   virtual void insert_point(const pcl::PointXYZITC &point) override;
   virtual void update() override;
 
-  virtual bool is_valid() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return is_valid_; }
-  virtual vector3_t normal() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return normal_; }
-  virtual vector3_t main_axis() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return main_axis_; }
-  virtual vector3_t secondary_axis() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return secondary_axis_; }
-  virtual vector3_t center() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return center_; }
-  virtual scalar_t d() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return d_; }
-  virtual scalar_t radius() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return radius_; }
-  virtual matrix3_t covariance() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return covariance_; }
-  virtual matrix6_t uncertainty() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return uncertainty_; }
-  virtual int point_num() const override { std::shared_lock<std::shared_mutex> lock(*mtx); return point_num_; }
+  virtual inline bool is_valid() const override { return is_valid_; }
+  virtual inline vector3_t normal() const override { return normal_; }
+  virtual inline vector3_t main_axis() const override { return main_axis_; }
+  virtual inline vector3_t secondary_axis() const override { return secondary_axis_; }
+  virtual inline vector3_t center() const override { return center_; }
+  virtual inline scalar_t d() const override { return d_; }
+  virtual inline scalar_t radius() const override { return radius_; }
+  virtual inline matrix3_t covariance() const override { return covariance_; }
+  virtual inline matrix6_t uncertainty() const override { return uncertainty_; }
+  virtual inline int point_num() const override { return point_num_; }
 private:
-  std::shared_ptr<std::shared_mutex> mtx;
+  std::shared_ptr<std::mutex> mtx;
   bool is_valid_ = false;
   int point_num_ = 0;
   vector3_t normal_;
