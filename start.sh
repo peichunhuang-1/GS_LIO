@@ -1,1 +1,1 @@
-docker run --privileged --rm -it -v $(pwd):/ros2_ws/src/gs-lio --mount type=bind,source=/dev/shm,target=/dev/shm --network host --shm-size=8g -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --ipc=host gs_lio 
+docker run --gpus all --privileged --rm -it -v $(pwd):/ros2_ws/src/gs-lio --mount type=bind,source=/dev/shm,target=/dev/shm --network host --shm-size=8g -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -e LOCAL_USER_ID="$(id -u)" -v /dev/dri:/dev/dri --ipc=host gs_lio 

@@ -1,13 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 cmake_policy(SET CMP0069 NEW)
-project(gs-lio)
-
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 23)
-endif()
+project(gs-lio LANGUAGES CUDA CXX)
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION "ON")
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64|armv7|armv8")
   set(IS_ARM TRUE)
@@ -19,7 +14,6 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_options(-O3)
-  add_compile_options(-ftree-vectorize -fopt-info-vec-optimized)
   if(IS_ARM)
     add_compile_options(-march=armv8-a)
     message(STATUS "Using ARM optimization: -march=armv8-a")
@@ -65,7 +59,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
-# add_subdirectory(thirdparty)
+add_subdirectory(thirdparty)
 
 # Build state lib
 add_library(gs_lio_state STATIC
