@@ -105,8 +105,8 @@ VoxelOctoTree::VoxelOctoTree(rclcpp::Node &node) : clock_(RCL_ROS_TIME)
   grids = std::make_shared<LRUCache<VOXEL_LOCATION, Voxel>>(VoxelOctoTree::LRU_MAX_VOXEL_NUM);
   node.declare_parameter<int>("voxel.max_point_num", 120);
   node.get_parameter_or<int>("voxel.max_point_num", Voxel::MAX_POINT_NUM, 120);
-  node.declare_parameter<int>("voxel.max_layer", 4);
-  node.get_parameter_or<int>("voxel.max_layer", Voxel::MAX_LAYER, 4);
+  node.declare_parameter<int>("voxel.max_layer", 3);
+  node.get_parameter_or<int>("voxel.max_layer", Voxel::MAX_LAYER, 3);
   node.declare_parameter<scalar_t>("voxel.basic_voxel_size", 0.5);
   node.get_parameter_or<scalar_t>("voxel.basic_voxel_size", Voxel::BASIC_VOXEL_SIZE, 0.5);
 

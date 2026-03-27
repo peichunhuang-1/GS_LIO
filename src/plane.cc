@@ -17,36 +17,39 @@ PlaneImpl& PlaneImpl::operator=(const PlaneImpl& other)
     d_ = other.d_;
     radius_ = other.radius_;
     is_valid_ = other.is_valid_;
-    mtx = std::make_shared<std::shared_mutex>();
+    mtx = std::make_shared<std::mutex>();
   }
   return *this;
 }
 
 void PlaneImpl::insert_point(const pcl::PointXYZITC &point)
 {
-  std::unique_lock<std::shared_mutex> lock(*mtx);
+  std::unique_lock<std::mutex> lock(*mtx);
 
   vector3_t pw_eigen = point.xyz().cast<scalar_t>();
-  covariance_ = (point_num_ * (covariance_ + center_ * center_.transpose()) + pw_eigen * pw_eigen.transpose()) / (point_num_ + 1);
-  // update center and covariance
-  center_ = (point_num_ * center_ + pw_eigen) / (point_num_ + 1);
-  covariance_ -= center_ * center_.transpose();
-  p_covariance_ += point.covariance().cast<scalar_t>();
-  px_covariance_ += point.x * point.covariance().cast<scalar_t>();
-  py_covariance_ += point.y * point.covariance().cast<scalar_t>();
-  pz_covariance_ += point.z * point.covariance().cast<scalar_t>();
-  pxx_covariance_ += point.x * point.x * point.covariance().cast<scalar_t>();
-  pxy_covariance_ += point.x * point.y * point.covariance().cast<scalar_t>();
-  pxz_covariance_ += point.x * point.z * point.covariance().cast<scalar_t>();
-  pyy_covariance_ += point.y * point.y * point.covariance().cast<scalar_t>();
-  pyz_covariance_ += point.y * point.z * point.covariance().cast<scalar_t>();
-  pzz_covariance_ += point.z * point.z * point.covariance().cast<scalar_t>();
   point_num_++;
+  // welford
+  covariance_ += center_ * center_.transpose();
+  covariance_ += (pw_eigen * pw_eigen.transpose() - covariance_) / point_num_;
+  // update center and covariance
+  center_ += (pw_eigen - center_) / point_num_;
+  covariance_ -= center_ * center_.transpose();
+
+  p_covariance_ += (point.covariance().cast<scalar_t>() - p_covariance_) / point_num_;
+  px_covariance_ += (point.x * point.covariance().cast<scalar_t>() - px_covariance_) / point_num_;
+  py_covariance_ += (point.y * point.covariance().cast<scalar_t>() - py_covariance_) / point_num_;
+  pz_covariance_ += (point.z * point.covariance().cast<scalar_t>() - pz_covariance_) / point_num_;
+  pxx_covariance_ += (point.x * point.x * point.covariance().cast<scalar_t>() - pxx_covariance_) / point_num_;
+  pxy_covariance_ += (point.x * point.y * point.covariance().cast<scalar_t>() - pxy_covariance_) / point_num_;
+  pxz_covariance_ += (point.x * point.z * point.covariance().cast<scalar_t>() - pxz_covariance_) / point_num_;
+  pyy_covariance_ += (point.y * point.y * point.covariance().cast<scalar_t>() - pyy_covariance_) / point_num_;
+  pyz_covariance_ += (point.y * point.z * point.covariance().cast<scalar_t>() - pyz_covariance_) / point_num_;
+  pzz_covariance_ += (point.z * point.z * point.covariance().cast<scalar_t>() - pzz_covariance_) / point_num_;
 }
 
 void PlaneImpl::update()
 {
-  std::unique_lock<std::shared_mutex> lock(*mtx);
+  std::unique_lock<std::mutex> lock(*mtx);
   if (point_num_ < CONSTRUCT_THRESHOLD) 
   {
     is_valid_ = false;
@@ -107,26 +110,20 @@ void PlaneImpl::update()
   static matrix3_t V; 
   V.col(0) = eigen_vec_min; V.col(1) = eigen_vec_mid; V.col(2) = eigen_vec_max;
   // update uncertainty
-  uncertainty_.block<3,3>(0, 0) = 
-    V * Mx * pxx_covariance_ * Mx.transpose() * V.transpose() +
-    V * Mx * pxy_covariance_ * My.transpose() * V.transpose() + 
-    V * Mx * pxz_covariance_ * Mz.transpose() * V.transpose() +
-    V * Mx * px_covariance_ * C.transpose() * V.transpose() + 
-    V * My * pxy_covariance_ * Mx.transpose() * V.transpose() +
-    V * My * pyy_covariance_ * My.transpose() * V.transpose() +
-    V * My * pyz_covariance_ * Mz.transpose() * V.transpose() +
-    V * My * py_covariance_ * C.transpose() * V.transpose() +
-    V * Mz * pxz_covariance_ * Mx.transpose() * V.transpose() +
-    V * Mz * pyz_covariance_ * My.transpose() * V.transpose() +
-    V * Mz * pzz_covariance_ * Mz.transpose() * V.transpose() +
-    V * Mz * pz_covariance_ * C.transpose() * V.transpose();
-  uncertainty_.block<3,3>(0, 3) = 
-    V * Mx * px_covariance_ * J_Q.transpose() +
-    V * My * py_covariance_ * J_Q.transpose() +
-    V * Mz * pz_covariance_ * J_Q.transpose() +
-    V * C * p_covariance_ * J_Q.transpose();
+  uncertainty_.block<3,3>(0, 0) = V * point_num_ * (
+   Mx * (pxx_covariance_ * Mx.transpose() + pxy_covariance_ * My.transpose() + pxz_covariance_ * Mz.transpose() + px_covariance_ * C.transpose()) + 
+   My * (pxy_covariance_ * Mx.transpose() + pyy_covariance_ * My.transpose() + pyz_covariance_ * Mz.transpose() + py_covariance_ * C.transpose()) + 
+   Mz * (pxz_covariance_ * Mx.transpose() + pyz_covariance_ * My.transpose() + pzz_covariance_ * Mz.transpose() + pz_covariance_ * C.transpose())
+  ) * V.transpose();
+  uncertainty_.block<3,3>(0, 3) = point_num_ * V * (
+   Mx * px_covariance_ + 
+   My * py_covariance_ + 
+   Mz * pz_covariance_ + 
+   C * p_covariance_
+   ) * 
+  J_Q.transpose();
   uncertainty_.block<3,3>(3, 0) = uncertainty_.block<3,3>(0, 3).transpose();
-  uncertainty_.block<3,3>(3, 3) = J_Q * p_covariance_ * J_Q.transpose();
+  uncertainty_.block<3,3>(3, 3) = J_Q * p_covariance_ * point_num_ * J_Q.transpose();
 
   // update other members
   normal_ = eigen_vec_min.normalized();
