@@ -33,6 +33,8 @@
 #define DIM     2
 #define DEG     ( DIM + 1 ) 
 
+#define REAL_TYPE_FP32
+
 #ifdef REAL_TYPE_FP32
 typedef float RealType;
 const RealType RealMax = FLT_MAX;
