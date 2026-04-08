@@ -31,7 +31,6 @@ target_link_libraries(render
                       CUDA::cublas
                       simple-knn
                       mimalloc-static
-                      torch_delaunay
                       vikit)
 
 ament_target_dependencies(render

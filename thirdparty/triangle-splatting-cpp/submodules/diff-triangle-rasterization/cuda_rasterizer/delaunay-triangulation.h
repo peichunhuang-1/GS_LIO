@@ -1,7 +1,7 @@
 #ifndef CUDA_RASTERIZER_DELAUNAY_TRIANGULATION_H_INCLUDED
 #define CUDA_RASTERIZER_DELAUNAY_TRIANGULATION_H_INCLUDED
 
-#include "GpuDelaunay.h"
+#include "gDel2D/GpuDelaunay.h"
 #include "auxiliary.h"
 
 namespace DELAUNAY_TRIANGULATION

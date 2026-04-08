@@ -4,9 +4,7 @@
 #include <torch/script.h>
 #include "camera.h"
 #include <pcl_conversions/pcl_conversions.h>
-#include <torch_delaunay/predicate.h>
-#include <torch_delaunay/sweephull.h>
-#include <torch_delaunay/triangle.h>
+
 
 std::vector<char> get_bytes_from_file(const std::string& filename);
 
@@ -41,7 +39,6 @@ class TriangleModel
     void extend_from_pcd(at::Tensor new_triangles, at::Tensor new_feature_dc, const int sh_degree);
   private:
     // utility function
-    void project_pcd_on_frame(const pcl::PointCloud<pcl::PointXYZ> &pcd, const Camera &camera, const cv::Mat &keyframe, torch::Tensor &triangles, torch::Tensor &features_dc);
     at::Tensor pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pcd);
     // properties member
     torch::Tensor _triangles_points;

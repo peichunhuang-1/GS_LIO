@@ -42,24 +42,17 @@ void TriangleModel::start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::Point
 at::Tensor TriangleModel::pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pcd)
 {
   int N = pcd.size();
-  at::Tensor tensor = torch::empty({N, 4}, torch::kFloat32);
+  at::Tensor tensor = torch::empty({N, 3}, torch::kFloat32);
 
   float* ptr = tensor.data_ptr<float>();
 
   for (int i = 0; i < N; ++i) {
-    ptr[i * 4 + 0] = pcd.points[i].x;
-    ptr[i * 4 + 1] = pcd.points[i].y;
-    ptr[i * 4 + 2] = pcd.points[i].z;
-    ptr[i * 4 + 3] = 1.0;
+    ptr[i * 3 + 0] = pcd.points[i].x;
+    ptr[i * 3 + 1] = pcd.points[i].y;
+    ptr[i * 3 + 2] = pcd.points[i].z;
   }
 
   return tensor;
-}
-
-void TriangleModel::project_pcd_on_frame(const pcl::PointCloud<pcl::PointXYZ> &pcd, const Camera &camera, const cv::Mat &keyframe, torch::Tensor &triangles, torch::Tensor &features_dc)
-{
-  auto pcd_tensor = pcl_to_tensor(pcd).cuda();
-  
 }
 
 void TriangleModel::extend_from_pcd(at::Tensor new_triangles, at::Tensor new_feature_dc, const int sh_degree)

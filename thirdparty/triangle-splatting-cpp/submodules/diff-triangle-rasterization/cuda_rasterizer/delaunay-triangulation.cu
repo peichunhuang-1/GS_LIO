@@ -1,6 +1,8 @@
 #include "delaunay-triangulation.h"
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
+#include <thrust/gather.h>
+
 namespace cg = cooperative_groups;
 
 __device__ static float atomicMax(float* address, float val)
@@ -15,7 +17,7 @@ __device__ static float atomicMax(float* address, float val)
     return __int_as_float(old);
 }
 
-template<int C> __global__ void project_point(
+__global__ void project_point(
     const int N,
     const int H,
     const int W,
@@ -47,7 +49,7 @@ template<int C> __global__ void project_point(
     int grid_h = H / grid;
     int grid_w = W / grid;
     int grid_idx = grid_h * W + grid_w;
-    if (atomicMax(grid_record[grid_idx], p_view.z) == 0) { // first point
+    if (atomicMax(&grid_record[grid_idx], p_view.z) == 0) { // first point
         point2d[2 * idx] = pixel2D.x;
         point2d[2 * idx + 1] = pixel2D.y;
         mask[idx] = true;
@@ -103,11 +105,122 @@ template<int C> __global__ void colorize_triangle(
         mask[idx] = false;
         return;
     }
-    for (int c = 0; c < 3; ++c) {
-        features_dc[idx * 3 + c] = image[c * H * W + y * W + x];
+    for (int c = 0; c < C; ++c) {
+        features_dc[idx * C + c] = image[c * H * W + y * W + x];
     }
 
     mask[idx] = true;
+}
+
+__global__ void fill_triangle_point(
+    int total_pts, 
+    const int* indices, 
+    const float* pcd, 
+    float* out_tri
+)
+{
+    auto idx = cg::this_grid().thread_rank();
+    if (idx >= total_pts) return;
+    
+    int pcd_idx = indices[idx];
+    out_tri[idx * 3 + 0] = pcd[pcd_idx * 3 + 0];
+    out_tri[idx * 3 + 1] = pcd[pcd_idx * 3 + 1];
+    out_tri[idx * 3 + 2] = pcd[pcd_idx * 3 + 2];
+}
+
+void prepare_gdel_input(
+    int N,
+    thrust::device_vector<float>& d_point2d,
+    thrust::device_vector<bool>& d_mask,
+    GDel2DInput& input,
+    thrust::device_vector<int>& d_mapping
+) 
+{
+    int num_valid = thrust::count(d_mask.begin(), d_mask.end(), true);
+    
+    d_mapping.resize(num_valid);
+    thrust::copy_if(
+        thrust::make_counting_iterator(0), 
+        thrust::make_counting_iterator(N), 
+        d_mask.begin(),
+        d_mapping.begin(),
+        thrust::identity<bool>()
+    );
+
+    thrust::device_ptr<Point2> p_points = thrust::device_pointer_cast(reinterpret_cast<Point2*>(thrust::raw_pointer_cast(d_point2d.data())));
+    
+    input.pointVec.resize(num_valid);
+    
+    auto it_begin = thrust::make_permutation_iterator(p_points, d_mapping.begin());
+    auto it_end   = thrust::make_permutation_iterator(p_points, d_mapping.end());
+
+    thrust::copy(it_begin, it_end, input.pointVec.begin());
+}
+
+void prepare_gdel_output(
+    const GDel2DOutput& output,
+    thrust::device_vector<int>& triangles_index
+)
+{
+    size_t num_triangles = output.triVec.size();
+    size_t num_integers  = num_triangles * 3;
+
+    triangles_index.resize(num_integers);
+
+    if (num_triangles == 0) return;
+
+    const int* h_ptr = reinterpret_cast<const int*>(output.triVec.data());
+
+    thrust::copy(
+        h_ptr, 
+        h_ptr + num_integers, 
+        triangles_index.begin()
+    );
+}
+
+void prepare_output(
+    const int N,
+    thrust::device_vector<int>& d_triangles_index,
+    thrust::device_vector<float>& d_features_dc,
+    thrust::device_vector<bool>& d_triangle_mask,
+    float* triangles,
+    float* features_dc,
+    const float* pcd
+) {
+    int num_valid_triangles = thrust::count(d_triangle_mask.begin(), d_triangle_mask.end(), true);
+    using Int3 = thrust::tuple<int, int, int>;
+    thrust::device_vector<Int3> valid_tri_indices(num_valid_triangles);
+    thrust::device_ptr<Int3> tri_ptr = thrust::device_pointer_cast(reinterpret_cast<Int3*>(thrust::raw_pointer_cast(d_triangles_index.data())));
+    thrust::copy_if(
+        tri_ptr,
+        tri_ptr + N,
+        d_triangle_mask.begin(),
+        valid_tri_indices.begin(),
+        thrust::identity<bool>()
+    );
+
+    using Float3 = thrust::tuple<float, float, float>;
+    thrust::device_vector<Float3> d_features_dc_tmp;
+    d_features_dc_tmp.resize(num_valid_triangles);
+    thrust::device_ptr<Float3> feat_ptr = thrust::device_pointer_cast(reinterpret_cast<Float3*>(thrust::raw_pointer_cast(d_features_dc.data())));
+    thrust::copy_if(
+        feat_ptr,
+        feat_ptr + N,
+        d_triangle_mask.begin(),
+        d_features_dc_tmp.begin(),
+        thrust::identity<bool>()
+    );
+    features_dc = reinterpret_cast<float*>(thrust::raw_pointer_cast(d_features_dc_tmp.data()));
+
+    int threads_fill = num_valid_triangles;
+    int blocks_fill = (threads_fill + 255) / 256;
+    
+    fill_triangle_point<<<blocks_fill, 256>>>(
+        threads_fill,
+        reinterpret_cast<int*>(thrust::raw_pointer_cast(valid_tri_indices.data())),
+        pcd,
+        triangles
+    );
 }
 
 void DELAUNAY_TRIANGULATION::delaunay_triangulation(
@@ -129,13 +242,58 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
     thrust::device_vector<float> d_point2d(N * 2);
     thrust::device_vector<float> d_grid_record(H * W, 0.0f);
     thrust::device_vector<bool> d_mask(N, false);
+    thrust::device_vector<int> d_mapping;
+    GDel2DInput triangulation_input;
+    GDel2DOutput triangulation_output;
 
     int blocks = (N + 255) / 256;
-    project_point<3><<<blocks, 256>>>(
+    project_point<<<blocks, 256>>>(
         N, H, W, pcd, viewmatrix, projmatrix,
         thrust::raw_pointer_cast(d_point2d.data()),
         min_dist, max_dist, grid,
         thrust::raw_pointer_cast(d_grid_record.data()),
         thrust::raw_pointer_cast(d_mask.data())
+    );
+
+    // TODO: remove the host -> device part in delaunay triangulation
+    prepare_gdel_input(
+        N,
+        d_point2d,
+        d_mask,
+        triangulation_input,
+        d_mapping
+    );
+
+    GpuDel().compute(triangulation_input, &triangulation_output);
+
+    thrust::device_vector<int> d_triangles_index;
+    prepare_gdel_output(triangulation_output, d_triangles_index);
+
+    int N_TRIANGLES = d_triangles_index.size() / 3;
+    thrust::device_vector<bool> d_triangle_mask(N_TRIANGLES, false);
+    thrust::device_vector<float> d_features_dc(N_TRIANGLES * 3, 0.0f);
+    
+    blocks = (N_TRIANGLES + 255) / 256;
+    
+    colorize_triangle<3><<<blocks, 256>>>(
+        N_TRIANGLES,
+        H, W,
+        pcd, 
+        thrust::raw_pointer_cast(d_point2d.data()),
+        image,
+        thrust::raw_pointer_cast(d_triangles_index.data()),
+        thrust::raw_pointer_cast(d_features_dc.data()),
+        thrust::raw_pointer_cast(d_triangle_mask.data()),
+        dist_threshold
+    );
+
+    prepare_output(
+        N_TRIANGLES,
+        d_triangles_index,
+        d_features_dc,
+        d_triangle_mask,
+        triangles,
+        features_dc,
+        pcd
     );
 }

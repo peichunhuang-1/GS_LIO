@@ -31,6 +31,8 @@ add_library(CudaRasterizer
   cuda_rasterizer/rasterizer.h
   cuda_rasterizer/utils.h
   cuda_rasterizer/utils.cu
+  cuda_rasterizer/delaunay-triangulation.h
+  cuda_rasterizer/delaunay-triangulation.cu
 )
 
 set_target_properties(CudaRasterizer PROPERTIES 
@@ -43,6 +45,7 @@ set_target_properties(CudaRasterizer PROPERTIES
 
 target_include_directories(CudaRasterizer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cuda_rasterizer)
 target_include_directories(CudaRasterizer PRIVATE third_party/glm ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+target_link_libraries(CudaRasterizer gDel2D)
 
 add_library(DiffRasterization
   diff_triangle_rasterization.h
