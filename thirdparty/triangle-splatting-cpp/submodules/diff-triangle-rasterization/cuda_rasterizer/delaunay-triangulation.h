@@ -17,6 +17,7 @@ void delaunay_triangulation(
     const float* projmatrix, 
     float* triangles,
     float* features_dc,
+    int& num_triangles,
     const float min_dist,
     const float max_dist,
     const int grid,

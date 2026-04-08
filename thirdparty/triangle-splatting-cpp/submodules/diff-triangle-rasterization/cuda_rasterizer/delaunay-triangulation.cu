@@ -185,9 +185,11 @@ void prepare_output(
     thrust::device_vector<bool>& d_triangle_mask,
     float* triangles,
     float* features_dc,
+    int& num_triangles,
     const float* pcd
 ) {
     int num_valid_triangles = thrust::count(d_triangle_mask.begin(), d_triangle_mask.end(), true);
+    num_triangles = num_valid_triangles;
     using Int3 = thrust::tuple<int, int, int>;
     thrust::device_vector<Int3> valid_tri_indices(num_valid_triangles);
     thrust::device_ptr<Int3> tri_ptr = thrust::device_pointer_cast(reinterpret_cast<Int3*>(thrust::raw_pointer_cast(d_triangles_index.data())));
@@ -233,6 +235,7 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
     const float* projmatrix, 
     float* triangles,
     float* features_dc,
+    int& num_triangles,
     const float min_dist,
     const float max_dist,
     const int grid,
@@ -294,6 +297,7 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
         d_triangle_mask,
         triangles,
         features_dc,
+        num_triangles,
         pcd
     );
 }
