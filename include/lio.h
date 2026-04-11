@@ -8,6 +8,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace gs_lio
 {
@@ -66,6 +67,10 @@ class Lio: public Imu
 
     std::shared_ptr<tf2_ros::Buffer> tf_buffer;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener;
+
+    std::string lio_pointcloud_topic;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub;
+    void publish_pointcloud(const pcl::PointCloud<pcl::PointXYZITC> &points);
 };
 
 } // namespace gs_lio

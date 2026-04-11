@@ -1,4 +1,6 @@
 #include "lio.h"
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <pcl_conversions/pcl_conversions.h>
 
 namespace gs_lio
 {
@@ -20,6 +22,11 @@ Lio::Lio(const std::string &name) : Imu(name)
 
   this->declare_parameter<std::string>("lio.lidar_link", "lidar_link");
   this->get_parameter_or<std::string>("lio.lidar_link", lidar_link, "lidar_link");
+
+  this->declare_parameter<std::string>("lio.lio_pointcloud_topic", "lio/pointcloud");
+  this->get_parameter_or<std::string>("lio.lio_pointcloud_topic", lio_pointcloud_topic, "lio/pointcloud");
+
+  pointcloud_pub = this->create_publisher<sensor_msgs::msg::PointCloud2>(lio_pointcloud_topic, 10);
 
   tf_buffer = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
@@ -255,6 +262,8 @@ void Lio::optimize() {
       projected_undistorted_points,
       get_state());
     
+  publish_pointcloud(world_points);
+
   if (build_map_thread.joinable()) build_map_thread.join();
 
   build_map_thread = std::thread([this, world_points]() {
@@ -267,6 +276,29 @@ void Lio::optimize() {
     get_state().get_rotation().angleX(), get_state().get_rotation().angleY(), get_state().get_rotation().angleZ(), 
     get_state().get_linear_velocity().x(), get_state().get_linear_velocity().y(), get_state().get_linear_velocity().z()
   );
+}
+
+void Lio::publish_pointcloud(const pcl::PointCloud<pcl::PointXYZITC> &points)
+{
+  if (!pointcloud_pub || pointcloud_pub->get_subscription_count() == 0) return;
+
+  pcl::PointCloud<pcl::PointXYZ> cloud_xyz;
+  cloud_xyz.points.resize(points.points.size());
+  for (size_t i = 0; i < points.points.size(); ++i) 
+  {
+    cloud_xyz.points[i].x = points.points[i].x;
+    cloud_xyz.points[i].y = points.points[i].y;
+    cloud_xyz.points[i].z = points.points[i].z;
+  }
+  cloud_xyz.width = static_cast<uint32_t>(cloud_xyz.points.size());
+  cloud_xyz.height = 1;
+  cloud_xyz.is_dense = false;
+
+  sensor_msgs::msg::PointCloud2 msg;
+  pcl::toROSMsg(cloud_xyz, msg);
+  msg.header.frame_id = world_frame;
+  msg.header.stamp = rclcpp::Time(0);
+  pointcloud_pub->publish(msg);
 }
 
 void Lio::reset(const state_t &state) 
