@@ -1,7 +1,4 @@
 #include "delaunay-triangulation.h"
-#include <cooperative_groups.h>
-#include <cooperative_groups/reduce.h>
-#include <thrust/gather.h>
 
 namespace cg = cooperative_groups;
 

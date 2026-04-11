@@ -35,7 +35,7 @@
 #include <string>
 #include <functional>
 #include "cuda_rasterizer/utils.h"
-
+#include "cuda_rasterizer/delaunay-triangulation.h"
 
 std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
     auto lambda = [&t](size_t N) {
@@ -282,4 +282,45 @@ std::tuple<torch::Tensor, torch::Tensor> ComputeRelocationCUDA(
 
 	return std::make_tuple(final_opacity, final_scale);
 
+}
+
+std::tuple<torch::Tensor, torch::Tensor> TriangulationCUDA(
+    const int N, const int H, const int W,
+    const torch::Tensor &pcd,          // [N, 3]
+    const torch::Tensor &image,        // [3, H, W]
+    const torch::Tensor &viewmatrix,   // [4, 4]
+    const torch::Tensor &projmatrix,   // [4, 4]
+    const float min_dist,
+    const float max_dist,
+    const int grid,
+    const float dist_threshold
+) 
+{
+    int max_tris = N * 3; 
+    
+    auto options = torch::TensorOptions().dtype(torch::kFloat32).device(pcd.device());
+    torch::Tensor out_triangles = torch::empty({max_tris, 3, 3}, options); // [Tri, Verts, XYZ]
+    torch::Tensor out_features  = torch::empty({max_tris, 3}, options);    // [Tri, RGB]
+
+    int actual_num_triangles = 0;
+
+    DELAUNAY_TRIANGULATION::delaunay_triangulation(
+        N, H, W,
+        pcd.contiguous().data_ptr<float>(),
+        image.contiguous().data_ptr<float>(),
+        viewmatrix.contiguous().data_ptr<float>(),
+        projmatrix.contiguous().data_ptr<float>(),
+        out_triangles.data_ptr<float>(),
+        out_features.data_ptr<float>(),
+        actual_num_triangles,
+        min_dist,
+        max_dist,
+        grid,
+        dist_threshold
+    );
+
+    return std::make_tuple(
+        out_triangles.slice(0, 0, actual_num_triangles),
+        out_features.slice(0, 0, actual_num_triangles)
+    );
 }

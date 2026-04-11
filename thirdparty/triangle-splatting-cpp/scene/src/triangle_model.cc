@@ -34,15 +34,34 @@ void TriangleModel::setup_optimizer(double lr)
   _optimizer = std::make_unique<torch::optim::Adam>(optimizer_params_groups, torch::optim::AdamOptions(0.f).eps(1e-15));
 }
 
-void TriangleModel::start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::PointXYZ> &pcd, const Camera &campera, const cv::Mat &keyframe)
+void TriangleModel::start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::PointXYZ> &pcd, const Camera &camera, const cv::Mat &keyframe)
 {
-  
+  std::tuple<torch::Tensor, torch::Tensor> triangles_and_features = TriangulationCUDA(
+    pcd.points.size(),
+    keyframe.rows, keyframe.cols,
+    pcl_to_tensor(pcd),
+    cv_to_tensor(keyframe),
+    camera.getViewMatrix(),
+    camera.getFullViewMatrix(),
+    0.1,
+    10.0,
+    5,
+    0.05
+  );
 }
 
-at::Tensor TriangleModel::pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pcd)
+torch::Tensor TriangleModel::cv_to_tensor(const cv::Mat &img) {
+  cv::Mat img_float;
+  img.convertTo(img_float, CV_32FC3, 1.0f / 255.0f);
+  auto options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
+  torch::Tensor tensor = torch::from_blob(img_float.data, {img.rows, img.cols, 3}, options);
+  return tensor.permute({2, 0, 1}).to(torch::kCUDA).contiguous();
+}
+
+torch::Tensor TriangleModel::pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pcd)
 {
   int N = pcd.size();
-  at::Tensor tensor = torch::empty({N, 3}, torch::kFloat32);
+  torch::Tensor tensor = torch::empty({N, 3}, torch::kFloat32);
 
   float* ptr = tensor.data_ptr<float>();
 
@@ -52,7 +71,7 @@ at::Tensor TriangleModel::pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pc
     ptr[i * 3 + 2] = pcd.points[i].z;
   }
 
-  return tensor;
+  return tensor.to(torch::kCUDA);
 }
 
 void TriangleModel::extend_from_pcd(at::Tensor new_triangles, at::Tensor new_feature_dc, const int sh_degree)

@@ -18,7 +18,11 @@ add_subdirectory(submodules/diff-triangle-rasterization)
 add_subdirectory(submodules/simple-knn)
 add_subdirectory(submodules/vikit_common)
 
-add_library(render scene/src/camera.cc scene/src/triangle_model.cc scene/src/render.cc)
+add_library(render 
+  scene/src/camera.cc 
+  scene/src/triangle_model.cc 
+  scene/src/render.cc)
+
 target_include_directories(render PUBLIC scene/include ${TORCH_INCLUDE_DIRS})
 target_link_libraries(render 
                       DiffRasterization 

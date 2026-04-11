@@ -1,12 +1,17 @@
 #include "../GpuDelaunay.h"
 
-#include<iomanip>
-#include<iostream>
+#include <iomanip>
+#include <iostream>
 #include <thrust/gather.h>
 #include "KerCommon.h"
 #include "KerDivision.h"
 #include "KerPredicates.h"
 #include "ThrustWrapper.h"
+#include <limits>
+
+
+RealType epsilon = std::numeric_limits<RealType>::epsilon();
+RealType ccwerrboundA = (3.0 + 16.0 * epsilon) * epsilon;
 
 // #include "../../Visualizer.h"
 
@@ -140,7 +145,43 @@ struct Get2Ddist
 	}
 };
 
-RealType orient2dzero( const RealType *pa, const RealType *pb, const RealType *pc );
+RealType orient2dzero
+(
+const RealType *pa,
+const RealType *pb,
+const RealType *pc
+)
+{
+    RealType detleft, detright, det;
+    RealType detsum, errbound;
+
+    detleft = (pa[0] - pc[0]) * (pb[1] - pc[1]);
+    detright = (pa[1] - pc[1]) * (pb[0] - pc[0]);
+    det = detleft - detright;
+
+    if (detleft > 0.0) {
+        if (detright <= 0.0) {
+            return det;
+        } else {
+            detsum = detleft + detright;
+        }
+    } else if (detleft < 0.0) {
+        if (detright >= 0.0) {
+            return det;
+        } else {
+            detsum = -detleft - detright;
+        }
+    } else {
+        return det;
+    }
+
+    errbound = ccwerrboundA * detsum;
+    if ((det >= errbound) || (-det >= errbound)) {
+        return det;
+    }
+
+    return 0.0;
+}
 
 void GpuDel::constructInitialTriangles()
 {

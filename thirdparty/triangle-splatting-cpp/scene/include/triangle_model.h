@@ -4,7 +4,7 @@
 #include <torch/script.h>
 #include "camera.h"
 #include <pcl_conversions/pcl_conversions.h>
-
+#include "diff_triangle_rasterization.h"
 
 std::vector<char> get_bytes_from_file(const std::string& filename);
 
@@ -39,7 +39,8 @@ class TriangleModel
     void extend_from_pcd(at::Tensor new_triangles, at::Tensor new_feature_dc, const int sh_degree);
   private:
     // utility function
-    at::Tensor pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pcd);
+    torch::Tensor pcl_to_tensor(const pcl::PointCloud<pcl::PointXYZ> &pcd);
+    torch::Tensor cv_to_tensor(const cv::Mat &img);
     // properties member
     torch::Tensor _triangles_points;
     torch::Tensor _opacity;

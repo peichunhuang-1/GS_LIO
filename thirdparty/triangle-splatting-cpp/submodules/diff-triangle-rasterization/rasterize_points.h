@@ -86,3 +86,15 @@ std::tuple<torch::Tensor, torch::Tensor> ComputeRelocationCUDA(
 	torch::Tensor& N,
 	torch::Tensor& binoms,
 	const int n_max);
+
+std::tuple<torch::Tensor, torch::Tensor> TriangulationCUDA(
+    const int N, const int H, const int W,
+    const torch::Tensor &pcd,
+    const torch::Tensor &image,
+    const torch::Tensor &viewmatrix,
+    const torch::Tensor &projmatrix,
+	const float min_dist,
+    const float max_dist,
+    const int grid,
+    const float dist_threshold
+);

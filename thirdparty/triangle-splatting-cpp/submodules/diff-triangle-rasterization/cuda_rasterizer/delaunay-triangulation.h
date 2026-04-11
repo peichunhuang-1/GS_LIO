@@ -1,8 +1,11 @@
 #ifndef CUDA_RASTERIZER_DELAUNAY_TRIANGULATION_H_INCLUDED
 #define CUDA_RASTERIZER_DELAUNAY_TRIANGULATION_H_INCLUDED
 
-#include "gDel2D/GpuDelaunay.h"
 #include "auxiliary.h"
+#include "gDel2D/GpuDelaunay.h"
+#include <cooperative_groups.h>
+#include <cooperative_groups/reduce.h>
+#include <thrust/gather.h>
 
 namespace DELAUNAY_TRIANGULATION
 {
@@ -18,10 +21,10 @@ void delaunay_triangulation(
     float* triangles,
     float* features_dc,
     int& num_triangles,
-    const float min_dist,
-    const float max_dist,
-    const int grid,
-    const float dist_threshold
+    const float min_dist, // depth space threshold
+    const float max_dist, // depth space threshold
+    const int grid, // pixel space threshold
+    const float dist_threshold // 3d space distance threshold
 );
 
 }
