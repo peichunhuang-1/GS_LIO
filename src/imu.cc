@@ -6,6 +6,8 @@ namespace gs_lio
 Imu::Imu(const std::string & name) : estimator(), rclcpp::Node(name), mtx(std::make_shared<std::shared_mutex>())
 {
   std::string imu_topic;
+  this->declare_parameter<std::string>("imu.world_frame", "world");
+  this->get_parameter_or<std::string>("imu.world_frame", world_frame, "world");
   this->declare_parameter<std::string>("imu.topic", "/livox/imu");
   this->get_parameter_or<std::string>("imu.topic", imu_topic, "/livox/imu");
   sub = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, rclcpp::QoS(200000), std::bind(&Imu::imu_cb, this, std::placeholders::_1));
@@ -13,12 +15,32 @@ Imu::Imu(const std::string & name) : estimator(), rclcpp::Node(name), mtx(std::m
   this->declare_parameter<std::vector<double>>("imu.noise", {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001});
   this->get_parameter_or<std::vector<double>>("imu.noise", noise, {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001});
   measure_noise = Eigen::Vector<double, 12>(noise.data()).cast<scalar_t>();
+  this->declare_parameter<std::string>("imu.imu_link", "imu_link");
+  this->get_parameter_or<std::string>("imu.imu_link", imu_link, "imu_link");
+  tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 }
 
 Imu::~Imu()
 {
   sub.reset();
   buffer.clear();
+}
+
+void Imu::publish_tf(const state_t &state)
+{
+  geometry_msgs::msg::TransformStamped transform_stamped;
+  transform_stamped.header.stamp = rclcpp::Time(state.get_timestamp() * 1e9);
+  transform_stamped.header.frame_id = world_frame;
+  transform_stamped.child_frame_id = imu_link;
+  transform_stamped.transform.translation.x = state.get_translation().x();
+  transform_stamped.transform.translation.y = state.get_translation().y();
+  transform_stamped.transform.translation.z = state.get_translation().z();
+  auto q = state.get_rotation().unit_quaternion();
+  transform_stamped.transform.rotation.w = q.w();
+  transform_stamped.transform.rotation.x = q.x();
+  transform_stamped.transform.rotation.y = q.y();
+  transform_stamped.transform.rotation.z = q.z();
+  tf_broadcaster->sendTransform(transform_stamped);
 }
 
 stamp_t Imu::wait_imu(int timeout_ms)
@@ -66,6 +88,7 @@ bool Imu::forward(const stamp_t &tailstamp)
       state.set_imu_acceleration(accel_tail);
       state.set_imu_angular_velocity(ang_vel_tail);
       set_state(state);
+      publish_tf(state);
     }
     buffer.clear();
     return false;
@@ -82,6 +105,7 @@ bool Imu::forward(const stamp_t &tailstamp)
   bool ret = stamp_to_sec(buffer.front()->header.stamp) < tailstamp? false: true;
   stamp_t forward_tailstamp = std::min(tailstamp, stamp_to_sec(buffer.front()->header.stamp));
   set_state(forward_impl(get_state(), buffer.front(), forward_tailstamp));
+  publish_tf(get_state());
   propagated_queue.push_back(get_state());
   buffer.pop_front();
   return ret;

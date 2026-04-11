@@ -22,6 +22,7 @@ protected:
   state_t get_state() const;
   void set_state(const state_t &state);
   std::deque<state_t> propagated_queue;
+  std::string world_frame;
 };
 
 }

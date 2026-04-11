@@ -97,6 +97,7 @@ add_library(gs_lio_imu STATIC
 ament_target_dependencies(gs_lio_imu
   rclcpp
   sensor_msgs
+  tf2_ros
 )
 
 target_link_libraries(gs_lio_imu gs_lio_estimator)

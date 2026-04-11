@@ -20,8 +20,6 @@ Lio::Lio(const std::string &name) : Imu(name)
 
   this->declare_parameter<std::string>("lio.lidar_link", "lidar_link");
   this->get_parameter_or<std::string>("lio.lidar_link", lidar_link, "lidar_link");
-  this->declare_parameter<std::string>("lio.imu_link", "imu_link");
-  this->get_parameter_or<std::string>("lio.imu_link", imu_link, "imu_link");
 
   tf_buffer = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
@@ -251,6 +249,7 @@ void Lio::optimize() {
   // update covariance
   updated_state.set_covariance( (I_STATE - G) * updated_state.get_covariance() );
   set_state(updated_state);
+  publish_tf(updated_state);
 
   auto world_points = transform_pointcloud_to_world_frame(
       projected_undistorted_points,

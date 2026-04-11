@@ -50,7 +50,6 @@ class Lio: public Imu
     int distance_sigma_num = 3; // valid point to plane distance limit
     int valid_plane_threshold = 1000; // valid plane for initializing
 
-    std::string imu_link;
     std::string lidar_link;
 
     bool try_initialize();
