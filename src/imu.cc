@@ -105,7 +105,7 @@ bool Imu::forward(const stamp_t &tailstamp)
   bool ret = stamp_to_sec(buffer.front()->header.stamp) < tailstamp? false: true;
   stamp_t forward_tailstamp = std::min(tailstamp, stamp_to_sec(buffer.front()->header.stamp));
   set_state(forward_impl(get_state(), buffer.front(), forward_tailstamp));
-  publish_tf(get_state());
+  if (forward_tailstamp != tailstamp) publish_tf(get_state());
   propagated_queue.push_back(get_state());
   buffer.pop_front();
   return ret;
@@ -114,7 +114,7 @@ bool Imu::forward(const stamp_t &tailstamp)
 state_t Imu::forward_impl(const state_t & state, sensor_msgs::msg::Imu::ConstSharedPtr msg, const stamp_t &tailstamp)
 {
   double dt = tailstamp - state.get_timestamp();
-  if (dt < 0) throw std::runtime_error("forward time difference cannot be nagtive");
+  if (dt <= 0) throw std::runtime_error("forward time difference cannot be nagtive");
   vector3_t accel_tail(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
   vector3_t ang_vel_tail(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
   vector3_t mean_accel = 0.5 * (accel_tail + state.get_imu_acceleration()) * GRAVITY_CONSTANT - state.get_linear_bias();

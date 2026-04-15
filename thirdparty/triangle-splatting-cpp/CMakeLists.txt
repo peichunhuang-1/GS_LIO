@@ -11,6 +11,7 @@ find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Development REQUIRED)
 find_package(OpenCV REQUIRED)
 
+
 include_directories(${Python3_INCLUDE_DIRS} $<INSTALL_INTERFACE:include>)
 
 add_subdirectory(submodules/gDel2D)
@@ -53,6 +54,20 @@ target_link_libraries(utils
                       CUDA::cublas)
 target_compile_options(utils PRIVATE -O3 -use_fast_math)
 
-add_executable(renderer scene/src/trainer.cc)
-target_link_libraries(renderer render utils)
-target_compile_options(renderer PRIVATE -O3 -use_fast_math)
+add_executable(triangle_splatting scene/src/triangle_splatting.cc)
+target_link_libraries(triangle_splatting render)
+ament_target_dependencies(triangle_splatting 
+  rclcpp
+  sensor_msgs
+  tf2
+  tf2_ros
+  tf2_eigen
+  pcl_conversions
+  cv_bridge
+)
+target_compile_options(triangle_splatting PRIVATE -O3 -use_fast_math)
+
+install(TARGETS
+  triangle_splatting
+  DESTINATION lib/${PROJECT_NAME}
+)
