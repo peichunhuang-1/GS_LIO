@@ -44,6 +44,7 @@ find_package(OpenCV REQUIRED core calib3d features2d highgui imgproc)
 find_package(cv_bridge REQUIRED)
 find_package(OpenMP QUIET)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(Sophus REQUIRED)
 

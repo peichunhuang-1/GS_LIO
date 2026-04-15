@@ -23,6 +23,7 @@
   <depend>image_transport</depend>
   <depend>cv_bridge</depend>
   <depend>tf2_ros</depend>
+  <depend>tf2_msgs</depend>
 
   <!-- PCL and conversions -->
   <depend>pcl_conversions</depend>

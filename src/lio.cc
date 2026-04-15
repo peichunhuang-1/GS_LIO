@@ -213,7 +213,7 @@ vector18_t Lio::ieskf(const std::vector<std::shared_ptr<Residual>> &residuals,
 
 void Lio::optimize() {
   if (!try_initialize()) return;
-  
+  RCLCPP_INFO(this->get_logger(), "propagated state queue size %d", propagated_queue.size());
   state_t propagated_state = get_state();
   auto raw_points = lidar->get_pointcloud();
   auto projected_undistorted_points = undistorted_pointcloud(propagated_state, raw_points);
