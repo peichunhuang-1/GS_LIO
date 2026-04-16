@@ -24,7 +24,7 @@
 class TriangleSplatting: public rclcpp::Node
 {
 public:
-  TriangleSplatting(const float near = 0.01, const float far = 100);
+  TriangleSplatting(const float near = 0.01, const float far = 100, const int point_thres = 1e6);
   // training
   // void optimize(torch::Tensor &gt_image);
 
@@ -32,6 +32,7 @@ private:
   // class members
   float render_near;
   float render_far;
+  int point_threshold;
   std::shared_ptr<Camera> camera;
   TriangleModel model;
 
@@ -52,7 +53,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr info_sub;
   
   // render_impl
-  // torch::autograd::tensor_list render_impl();
+  torch::autograd::tensor_list render_impl();
 
   // setting camera
   void set_camera_intrinsic(vk_PinholeCamera_SharedPtr pinhole_camera);

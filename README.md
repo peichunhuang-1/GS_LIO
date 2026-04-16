@@ -27,7 +27,8 @@ Install and Test
   docker exec -it your-random-container bash
   cd /ros2_ws && source install/setup.bash
   # (MID360)
-  ros2 run tf2_ros static_transform_publisher -0.011 -0.02329 0.04412 0 0 0 1 lidar_link imu_link
+  ros2 run tf2_ros static_transform_publisher 0.011 0.02329 -0.04412 0 0 0 1 imu_link lidar_link 
+  ros2 run tf2_ros static_transform_publisher -0.02816  -0.05352  -0.01557   0.3533328  -0.3513514  0.6145922  0.611542  imu_link camera_link
 ```
 ```
   docker exec -it your-random-container bash

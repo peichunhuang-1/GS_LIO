@@ -1,6 +1,6 @@
 #include "triangle_splatting.h"
 
-TriangleSplatting::TriangleSplatting(const float near, const float far) : render_near(near), render_far(far), rclcpp::Node("triangle_splatting")
+TriangleSplatting::TriangleSplatting(const float near, const float far, const int point_thres) : render_near(near), render_far(far), point_threshold(point_thres), rclcpp::Node("triangle_splatting")
 {
   mtx = std::make_shared<std::mutex>();
   std::string camera_ns;
@@ -45,6 +45,7 @@ void TriangleSplatting::set_camera_pose(const Eigen::Quaternion<float>& q, const
 void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
 {
   std::lock_guard<std::mutex> lock(*mtx);
+  if (accum_points.size() < point_threshold || camera == nullptr) return;
   cv_bridge::CvImagePtr cv_ptr;
   cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
   cv::Mat image = cv_ptr->image;
@@ -72,7 +73,18 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
   t_vec = -q_eigen.toRotationMatrix().transpose() * t_vec;
   set_camera_pose(q_eigen, t_vec);
 
-  model.start_from_pcd_and_keyframe(accum_points, *camera, image);
+  success = model.start_from_pcd_and_keyframe(accum_points, *camera, image);
+  accum_points.points.clear();
+  if (!success) return;
+  auto ret = render_impl();
+  // auto image_tensor = ret[0];
+  // image_tensor = image_tensor.detach().to(torch::kCPU).to(torch::kU8);
+  // if (image_tensor.dim() == 3) {
+  //   image_tensor = image_tensor.permute({1, 2, 0});
+  // }
+  // cv::Mat img(image_tensor.size(0), image_tensor.size(1), CV_8UC3, image_tensor.data_ptr());
+  // cv::imwrite("/tmp/img.jpg", img);
+  // RCLCPP_INFO(this->get_logger(), "save image");
 }
 
 void TriangleSplatting::camera_info_cb(sensor_msgs::msg::CameraInfo::SharedPtr msg)
@@ -107,6 +119,53 @@ void TriangleSplatting::pointcloud_cb(sensor_msgs::msg::PointCloud2::SharedPtr m
     accum_points.points.end(),
     point_cloud.points.begin(),
     point_cloud.points.end()
+  );
+}
+
+torch::autograd::tensor_list TriangleSplatting::render_impl()
+{
+  auto means2D = torch::zeros_like(model.get_triangle_points().index({"...", 0, "..."}).squeeze()).set_requires_grad(true).to(torch::kCUDA);
+  auto scaling = torch::zeros_like(means2D.index({"...", 0})).set_requires_grad(true).to(torch::kCUDA).detach();  
+  auto density_factor = torch::zeros_like(scaling).set_requires_grad(true).to(torch::kCUDA).detach();
+  means2D.retain_grad();
+
+  auto rasterize_settings = TriangleSplattingSettings {
+    camera->height(),
+    camera->width(),
+    tanf(camera->fovx() * 0.5),
+    tanf(camera->fovy() * 0.5),
+    torch::tensor({0.f, 0.f, 0.f}, torch::kFloat32).to(torch::kCUDA),
+    camera->getViewMatrix(),
+    camera->getFullViewMatrix(),
+    model.sh_degree(),
+    camera->get_campos(),
+    false
+  };
+
+  auto rasterizer = TriangleRasterizer(rasterize_settings);
+
+  auto opacity = model.get_opacity();
+  auto sigma = model.get_sigma();
+  auto triangles_points = model.get_triangles_points_flatten();
+  auto num_points_per_triangle = model.get_num_points_per_triangle();
+  auto cumsum_of_points_per_triangle = model.get_cumsum_of_points_per_triangle();
+  auto number_of_points = model.get_number_of_points();
+  auto shs = model.get_sh();
+  auto mask = ((torch::sigmoid(model.get_opacity()) > 0.01).to(torch::kFloat32) - torch::sigmoid(model.get_opacity())).detach() + torch::sigmoid(model.get_opacity());
+  opacity = opacity * mask;
+  RCLCPP_INFO(this->get_logger(), "render");
+  return rasterizer.forward(
+    triangles_points,
+    sigma,
+    num_points_per_triangle,
+    cumsum_of_points_per_triangle,
+    number_of_points,
+    opacity,
+    means2D,
+    scaling,
+    density_factor,
+    shs,
+    torch::Tensor()
   );
 }
 

@@ -96,5 +96,6 @@ std::tuple<torch::Tensor, torch::Tensor> TriangulationCUDA(
 	const float min_dist,
     const float max_dist,
     const int grid,
-    const float dist_threshold
+    const float dist_threshold,
+	int &append_triangles_num
 );

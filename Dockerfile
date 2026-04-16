@@ -85,11 +85,11 @@ RUN apt-get update && apt-get install -y \
     openssh-server sudo \
     libx11-6 libxcb1 libglu1-mesa
 
-RUN apt-get install -y xvfb x11vnc && apt-get install -y xpra && apt-get install -y python3-uinput && apt-get install -y dbus-x11 && apt-get update && apt-get install -y libgl1-mesa-glx libglx-mesa0 libglu1-mesa libgl1-mesa-dri mesa-utils && rm -rf /var/lib/apt/lists/*
+# RUN apt-get install -y xvfb x11vnc && apt-get install -y xpra && apt-get install -y python3-uinput && apt-get install -y dbus-x11 && apt-get update && apt-get install -y libgl1-mesa-glx libglx-mesa0 libglu1-mesa libgl1-mesa-dri mesa-utils && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y xserver-xorg xinit xterm openbox
+# RUN apt-get update && apt-get install -y xserver-xorg xinit xterm openbox
 
-RUN echo 'openbox & exec xterm' > /root/.xsession && chmod +x /root/.xsession
+# RUN echo 'openbox & exec xterm' > /root/.xsession && chmod +x /root/.xsession
 
 # Install mimalloc
 RUN cd /tmp && git clone https://github.com/microsoft/mimalloc.git && \
