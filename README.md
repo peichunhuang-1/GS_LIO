@@ -41,6 +41,13 @@ Install and Test
   ros2 bag play your-bag
 ```
 
+```
+  docker exec -it your-random-container bash
+  cd /ros2_ws && source install/setup.bash
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/libtorch/lib/
+  ros2 run gs-lio triangle_splatting
+```
+
 TODO:
 ---
 ~~1. running speed: running speed should not be that slow, still finding where is the bottle neck~~
