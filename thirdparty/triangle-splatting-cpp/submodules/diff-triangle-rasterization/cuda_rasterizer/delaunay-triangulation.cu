@@ -63,6 +63,7 @@ template<int C> __global__ void colorize_triangle(
     const float* point2d,
     const float* image,
     const int* triangles_index,
+    const int* mapping,
     float* features_dc,
     bool* mask,
     const float dist_threshold
@@ -70,9 +71,9 @@ template<int C> __global__ void colorize_triangle(
 {
     auto idx = cg::this_grid().thread_rank();
 	if (idx >= N) return;
-    int v0_idx = triangles_index[3 * idx];
-    int v1_idx = triangles_index[3 * idx + 1];
-    int v2_idx = triangles_index[3 * idx + 2];
+    int v0_idx = mapping[triangles_index[3 * idx]];
+    int v1_idx = mapping[triangles_index[3 * idx + 1]];
+    int v2_idx = mapping[triangles_index[3 * idx + 2]];
 
     float3 p0 = {pcd[3 * v0_idx], pcd[3 * v0_idx + 1], pcd[3 * v0_idx + 2]};
     float3 p1 = {pcd[3 * v1_idx], pcd[3 * v1_idx + 1], pcd[3 * v1_idx + 2]};
@@ -113,13 +114,14 @@ __global__ void fill_triangle_point(
     int total_pts, 
     const int* indices, 
     const float* pcd, 
+    const int* mapping,
     float* out_tri
 )
 {
     auto idx = cg::this_grid().thread_rank();
     if (idx >= total_pts) return;
     
-    int pcd_idx = indices[idx];
+    int pcd_idx = mapping[indices[idx]];
     out_tri[idx * 3 + 0] = pcd[pcd_idx * 3 + 0];
     out_tri[idx * 3 + 1] = pcd[pcd_idx * 3 + 1];
     out_tri[idx * 3 + 2] = pcd[pcd_idx * 3 + 2];
@@ -134,7 +136,6 @@ void prepare_gdel_input(
 ) 
 {
     int num_valid = thrust::count(d_mask.begin(), d_mask.end(), true);
-    std::cout << num_valid << std::endl;
     
     d_mapping.resize(num_valid);
     thrust::copy_if(
@@ -179,13 +180,13 @@ void prepare_output(
     thrust::device_vector<int>& d_triangles_index,
     thrust::device_vector<float>& d_features_dc,
     thrust::device_vector<bool>& d_triangle_mask,
+    thrust::device_vector<int>& d_mapping,
     float* triangles,
     float* features_dc,
     int& num_triangles,
     const float* pcd
 ) {
     int num_valid_triangles = thrust::count(d_triangle_mask.begin(), d_triangle_mask.end(), true);
-    std::cout << d_triangle_mask.size() << "\t" << num_valid_triangles << std::endl;
     num_triangles = num_valid_triangles;
     if (num_valid_triangles == 0) return;
     using Int3 = thrust::tuple<int, int, int>;
@@ -219,6 +220,7 @@ void prepare_output(
         threads_fill,
         reinterpret_cast<int*>(thrust::raw_pointer_cast(valid_tri_indices.data())),
         pcd,
+        reinterpret_cast<int*>(thrust::raw_pointer_cast(d_mapping.data())),
         triangles
     );
 }
@@ -283,6 +285,7 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
         thrust::raw_pointer_cast(d_point2d.data()),
         image,
         thrust::raw_pointer_cast(d_triangles_index.data()),
+        thrust::raw_pointer_cast(d_mapping.data()),
         thrust::raw_pointer_cast(d_features_dc.data()),
         thrust::raw_pointer_cast(d_triangle_mask.data()),
         dist_threshold
@@ -293,6 +296,7 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
         d_triangles_index,
         d_features_dc,
         d_triangle_mask,
+        d_mapping,
         triangles,
         features_dc,
         num_triangles,
