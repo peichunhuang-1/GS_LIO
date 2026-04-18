@@ -2,7 +2,7 @@
 
 namespace gs_lio
 {
-scalar_t PlaneImpl::PLANE_THRESHOLD = 0.0025;
+scalar_t PlaneImpl::PLANE_THRESHOLD = 0.0004;
 int PlaneImpl::CONSTRUCT_THRESHOLD = 12;
 // Assignment operator
 PlaneImpl& PlaneImpl::operator=(const PlaneImpl& other)

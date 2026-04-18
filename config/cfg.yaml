@@ -1,0 +1,26 @@
+/**:
+  ros__parameters:
+    imu:
+      world_frame: "world"
+      imu_link: "imu_link"
+      topic: "/livox/imu"
+      noise: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+    lidar:
+      filter_ratio: 1
+      blind_zone: 0.1
+      range_covariance: 0.01
+      angle_covariance: 0.01
+      topic: "/livox/lidar"
+    lio:
+      lidar_plugin_name: "livox"
+      max_iter: 5
+      radius_sigma_num: 5
+      distance_sigma_num: 3
+      lidar_link: "lidar_link"
+      lio_pointcloud_topic: "/lio/pointcloud"
+    voxel:
+      lru_max_voxel_num: 70000
+      max_point_num: 120
+      max_layer: 3
+      basic_voxel_size: 0.5
+      marker_topic: "/voxel/octotree_markers"
