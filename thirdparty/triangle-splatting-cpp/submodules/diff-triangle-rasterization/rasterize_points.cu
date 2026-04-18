@@ -321,7 +321,7 @@ std::tuple<torch::Tensor, torch::Tensor> TriangulationCUDA(
     );
 	append_triangles_num = actual_num_triangles;
     return std::make_tuple(
-        out_triangles.slice(0, 0, actual_num_triangles * 3),
+        out_triangles.slice(0, 0, actual_num_triangles),
         out_features.slice(0, 0, actual_num_triangles)
     );
 }
