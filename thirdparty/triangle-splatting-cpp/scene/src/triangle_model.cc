@@ -47,7 +47,7 @@ bool TriangleModel::start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::Point
     0.1,
     10.0,
     5,
-    0.1,
+    0.05,
     append_triangles_num
   );
   if (append_triangles_num == 0) return false;

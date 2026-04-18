@@ -46,6 +46,7 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
 {
   std::lock_guard<std::mutex> lock(*mtx);
   if (accum_points.size() < point_threshold || camera == nullptr) return;
+  if (accum_points.size() < point_threshold || camera == nullptr) return;
   cv_bridge::CvImagePtr cv_ptr;
   cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
   cv::Mat image = cv_ptr->image;
@@ -77,14 +78,12 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
   accum_points.points.clear();
   if (!success) return;
   auto ret = render_impl();
-  // auto image_tensor = ret[0];
-  // image_tensor = image_tensor.detach().to(torch::kCPU).to(torch::kU8);
-  // if (image_tensor.dim() == 3) {
-  //   image_tensor = image_tensor.permute({1, 2, 0});
-  // }
-  // cv::Mat img(image_tensor.size(0), image_tensor.size(1), CV_8UC3, image_tensor.data_ptr());
-  // cv::imwrite("/tmp/img.jpg", img);
-  // RCLCPP_INFO(this->get_logger(), "save image");
+  auto image_tensor = ret[0];
+  image_tensor = image_tensor.detach().to(torch::kCPU).mul(255).clamp(0, 255).to(torch::kUInt8).permute({1, 2, 0}).contiguous();
+  cv::Mat img(image_tensor.size(0), image_tensor.size(1), CV_8UC3, image_tensor.data_ptr());
+  cv::imwrite("/ros2_ws/src/gs-lio/img.jpg", img);
+  cv::imwrite("/ros2_ws/src/gs-lio/origin_img.jpg", image);
+  RCLCPP_INFO(this->get_logger(), "save image %d, %d", image_tensor.size(0), image_tensor.size(1));
 }
 
 void TriangleSplatting::camera_info_cb(sensor_msgs::msg::CameraInfo::SharedPtr msg)
@@ -153,7 +152,6 @@ torch::autograd::tensor_list TriangleSplatting::render_impl()
   auto shs = model.get_sh();
   auto mask = ((torch::sigmoid(model.get_opacity()) > 0.01).to(torch::kFloat32) - torch::sigmoid(model.get_opacity())).detach() + torch::sigmoid(model.get_opacity());
   opacity = opacity * mask;
-  RCLCPP_INFO(this->get_logger(), "render");
   return rasterizer.forward(
     triangles_points,
     sigma,

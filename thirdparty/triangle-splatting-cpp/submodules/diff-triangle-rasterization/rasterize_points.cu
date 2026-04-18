@@ -300,8 +300,8 @@ std::tuple<torch::Tensor, torch::Tensor> TriangulationCUDA(
     int max_tris = N * 3; 
     
     auto options = torch::TensorOptions().dtype(torch::kFloat32).device(pcd.device());
-    torch::Tensor out_triangles = torch::empty({max_tris * 3, 1, 3}, options); // [Tri * Vertex, XYZ]
-    torch::Tensor out_features  = torch::empty({max_tris, 3}, options);    // [Tri, RGB]
+    torch::Tensor out_triangles = torch::empty({max_tris, 3, 3}, options); // [Tri * Vertex, XYZ]
+    torch::Tensor out_features  = torch::empty({max_tris, 1, 3}, options);    // [Tri, RGB]
 
     int actual_num_triangles = 0;
 

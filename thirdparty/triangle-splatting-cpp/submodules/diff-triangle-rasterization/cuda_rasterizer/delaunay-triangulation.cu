@@ -43,9 +43,9 @@ __global__ void project_point(
         mask[idx] = false;
         return;
     }
-    int grid_h = idx / W;
-    int grid_w = idx - grid_h * W;
-    int grid_idx = grid_h * W / grid / grid + grid_w / grid;
+    int j = idx / W;
+    int i = idx - j * W;
+    int grid_idx = j * W / grid / grid + i / grid;
     if (atomicMax(&grid_record[grid_idx], p_view.z) == 0) { // first point
         point2d[2 * idx] = pixel2D.x;
         point2d[2 * idx + 1] = pixel2D.y;
@@ -121,10 +121,19 @@ __global__ void fill_triangle_point(
     auto idx = cg::this_grid().thread_rank();
     if (idx >= total_pts) return;
     
-    int pcd_idx = mapping[indices[idx]];
-    out_tri[idx * 3 + 0] = pcd[pcd_idx * 3 + 0];
-    out_tri[idx * 3 + 1] = pcd[pcd_idx * 3 + 1];
-    out_tri[idx * 3 + 2] = pcd[pcd_idx * 3 + 2];
+    int p1_idx = mapping[indices[idx * 3]];
+    int p2_idx = mapping[indices[idx * 3 + 1]];
+    int p3_idx = mapping[indices[idx * 3 + 2]];
+
+    out_tri[idx * 9 + 0] = pcd[p1_idx * 3];
+    out_tri[idx * 9 + 1] = pcd[p1_idx * 3 + 1];
+    out_tri[idx * 9 + 2] = pcd[p1_idx * 3 + 2];
+    out_tri[idx * 9 + 3] = pcd[p2_idx * 3];
+    out_tri[idx * 9 + 4] = pcd[p2_idx * 3 + 1];
+    out_tri[idx * 9 + 5] = pcd[p2_idx * 3 + 2];
+    out_tri[idx * 9 + 6] = pcd[p3_idx * 3];
+    out_tri[idx * 9 + 7] = pcd[p3_idx * 3 + 1];
+    out_tri[idx * 9 + 8] = pcd[p3_idx * 3 + 2];
 }
 
 void prepare_gdel_input(
@@ -211,7 +220,12 @@ void prepare_output(
         d_features_dc_tmp.begin(),
         thrust::identity<bool>()
     );
-    features_dc = reinterpret_cast<float*>(thrust::raw_pointer_cast(d_features_dc_tmp.data()));
+    cudaMemcpy(
+        features_dc, 
+        thrust::raw_pointer_cast(d_features_dc_tmp.data()), 
+        num_valid_triangles * 3 * sizeof(float), 
+        cudaMemcpyDeviceToDevice
+    );
 
     int threads_fill = num_valid_triangles;
     int blocks_fill = (threads_fill + 255) / 256;
@@ -244,7 +258,7 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
 {
     if (N < 3) return;
     thrust::device_vector<float> d_point2d(N * 2);
-    thrust::device_vector<float> d_grid_record(H * W, 0.0f);
+    thrust::device_vector<float> d_grid_record(H * W / grid / grid, 0.0f);
     thrust::device_vector<bool> d_mask(N, false);
     thrust::device_vector<int> d_mapping;
     GDel2DInput triangulation_input;

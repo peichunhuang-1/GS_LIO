@@ -170,7 +170,7 @@ torch::autograd::tensor_list TriangleRasterizer::forward(const torch::Tensor& tr
 {
   if ((sh.defined() && colors_precomp.defined()) || (!sh.defined() && !colors_precomp.defined())) 
     throw std::invalid_argument("Please provide exactly one of either SH or precomputed colors!");
-
+  auto dummy_colors = colors_precomp.defined()? colors_precomp : torch::empty({0}, sh.options());
   return rasterize_triangles(
     triangles_points,
     sigma,
@@ -178,7 +178,7 @@ torch::autograd::tensor_list TriangleRasterizer::forward(const torch::Tensor& tr
     cumsum_of_points_per_triangle,
     number_of_points,
     sh,
-    colors_precomp,
+    dummy_colors,
     opacities,
     means2D,
     scaling,
