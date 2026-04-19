@@ -59,13 +59,10 @@ def generate_launch_description():
             output='screen',
             shell=True,
         ),
-        # Node(
-        #     package="gs-lio",
-        #     executable="triangle_splatting",
-        #     name="triangle_splatting",
-        #     output="screen",
-        #     env={
-        #       "LD_LIBRARY_PATH": "/usr/local/libtorch/lib:" + os.environ.get("LD_LIBRARY_PATH", "")
-        #     }
-        # )
+        Node(
+            package="gs-lio",
+            executable="triangle_splatting",
+            name="triangle_splatting",
+            output="screen"
+        )
     ])
