@@ -42,7 +42,7 @@ def generate_launch_description():
             package="tf2_ros",
             executable="static_transform_publisher",
             name="static_transform_publisher_camera",
-            arguments=["-0.02816 ", "-0.05352", "-0.01557", "0.3533328", "-0.3513514", "0.6145922", "0.611542", "imu_link", "camera_link"],
+            arguments=["-0.02816", "-0.05352", "-0.01557", "0.3533328", "-0.3513514", "0.6145922", "0.611542", "imu_link", "camera_link"],
             output="screen"
         ),
         Node(
