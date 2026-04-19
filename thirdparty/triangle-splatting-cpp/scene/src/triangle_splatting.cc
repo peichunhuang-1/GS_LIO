@@ -67,7 +67,6 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
   const auto &t = T_camera_world.transform.translation;
   const auto &q = T_camera_world.transform.rotation;
 
-
   Eigen::Vector3f t_vec = Eigen::Vector3d(t.x, t.y, t.z).cast<float>();
   Eigen::Quaternionf q_eigen = Eigen::Quaterniond(q.w, q.x, q.y, q.z).cast<float>();
 

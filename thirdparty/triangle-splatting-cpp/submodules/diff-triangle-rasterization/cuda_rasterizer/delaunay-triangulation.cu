@@ -43,9 +43,9 @@ __global__ void project_point(
         mask[idx] = false;
         return;
     }
-    int j = idx / W;
-    int i = idx - j * W;
-    int grid_idx = j * W / grid / grid + i / grid;
+    int j = pixel2D.y / grid;
+    int i = pixel2D.x / grid;
+    int grid_idx = j * (W / grid) + i;
     if (atomicMax(&grid_record[grid_idx], p_view.z) == 0) { // first point
         point2d[2 * idx] = pixel2D.x;
         point2d[2 * idx + 1] = pixel2D.y;
