@@ -42,6 +42,11 @@ TriangleSplatting::TriangleSplatting() : rclcpp::Node("triangle_splatting")
   this->get_parameter_or<float>("triangle_splatting.render_far", render_far, render_far);
   this->declare_parameter<int>("triangle_splatting.point_threshold", 1000000);
   this->get_parameter_or<int>("triangle_splatting.point_threshold", point_threshold, point_threshold);
+  
+  std::string combined_img_topic;
+  this->declare_parameter<std::string>("triangle_splatting.combined_img_topic", "triangle_splatting/combined");
+  this->get_parameter_or<std::string>("triangle_splatting.combined_img_topic", combined_img_topic, "triangle_splatting/combined");
+  combined_img_pub = this->create_publisher<sensor_msgs::msg::Image>(combined_img_topic, rclcpp::QoS(10));
 }
 
 void TriangleSplatting::set_camera_intrinsic(vk_PinholeCamera_SharedPtr pinhole_camera)
@@ -96,9 +101,28 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
   auto image_tensor = ret[0];
   image_tensor = image_tensor.detach().to(torch::kCPU).mul(255).clamp(0, 255).to(torch::kUInt8).permute({1, 2, 0}).contiguous();
   cv::Mat img(image_tensor.size(0), image_tensor.size(1), CV_8UC3, image_tensor.data_ptr());
-  cv::imwrite("/ros2_ws/src/gs-lio/img.jpg", img);
-  cv::imwrite("/ros2_ws/src/gs-lio/origin_img.jpg", image);
-  RCLCPP_INFO(this->get_logger(), "save image %d, %d", image_tensor.size(0), image_tensor.size(1));
+  
+  cv::Mat original_bgr;
+  if (image.channels() == 3 && image.type() == CV_8UC3) {
+    if (msg->encoding == "rgb8") {
+      cv::cvtColor(image, original_bgr, cv::COLOR_RGB2BGR);
+    } else {
+      original_bgr = image.clone();
+    }
+  } else {
+    original_bgr = image.clone();
+  }
+  
+  // combine images vertically (original on top, rendered on bottom)
+  cv::Mat combined(original_bgr.rows + img.rows, original_bgr.cols, CV_8UC3);
+  original_bgr.copyTo(combined(cv::Rect(0, 0, original_bgr.cols, original_bgr.rows)));
+  img.copyTo(combined(cv::Rect(0, original_bgr.rows, img.cols, img.rows)));
+  
+  // publish combined image
+  auto combined_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", combined).toImageMsg();
+  combined_msg->header.stamp = msg->header.stamp;
+  combined_msg->header.frame_id = camera_frame_id;
+  combined_img_pub->publish(*combined_msg);
 }
 
 void TriangleSplatting::camera_info_cb(sensor_msgs::msg::CameraInfo::SharedPtr msg)

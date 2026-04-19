@@ -10,6 +10,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <std_msgs/msg/header.hpp>
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -57,6 +58,7 @@ private:
   // camera info callback for camera intrinsic
   void camera_info_cb(sensor_msgs::msg::CameraInfo::SharedPtr msg);
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr info_sub;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr combined_img_pub;
   
   // render_impl
   torch::autograd::tensor_list render_impl();

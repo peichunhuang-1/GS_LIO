@@ -24,3 +24,15 @@
       max_layer: 3
       basic_voxel_size: 0.5
       marker_topic: "/voxel/octotree_markers"
+    
+    triangle_splatting:
+      point_threshold: 1000000
+      combined_img_topic: "triangle_splatting/combined"
+      camera_link: "camera_link"
+      world_link: "world"
+      render_near: 0.01
+      render_far: 100
+      min_dist: 0.1
+      max_dist: 50
+      grid: 10
+      dist_threshold: 0.1
