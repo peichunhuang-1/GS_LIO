@@ -3,7 +3,8 @@
 
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.launch_description_sources import FrontendLaunchDescriptionSource
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
@@ -11,6 +12,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     config_file_dir = os.path.join(get_package_share_directory("gs-lio"), "config")
+    foxglove_bridge_dir = get_package_share_directory("foxglove_bridge")
     #Load parameters
     config_cmd = os.path.join(config_file_dir, "cfg.yaml")
 
@@ -26,9 +28,21 @@ def generate_launch_description():
         description='Whether to respawn if a node crashes. Applied when composition is disabled.')
 
     params_file = LaunchConfiguration('params_file')
+
+    foxglove_bridge_launch = IncludeLaunchDescription(
+        FrontendLaunchDescriptionSource(
+            os.path.join(foxglove_bridge_dir, "launch", "foxglove_bridge_launch.xml")
+        ),
+        launch_arguments={
+            'address': '0.0.0.0',
+            'port': '8765'
+        }.items()
+    )
+
     return LaunchDescription([
         config_arg,
         use_respawn_arg,
+        foxglove_bridge_launch,
         Node(
             package="gs-lio",
             executable="lio_node",
