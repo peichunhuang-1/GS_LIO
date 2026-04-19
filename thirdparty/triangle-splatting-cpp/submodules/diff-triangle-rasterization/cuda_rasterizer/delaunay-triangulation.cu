@@ -2,16 +2,13 @@
 
 namespace cg = cooperative_groups;
 
-__device__ static float atomicMax(float* address, float val)
-{
-    int* address_as_i = (int*) address;
-    int old = *address_as_i, assumed;
-    do {
-        assumed = old;
-        old = ::atomicCAS(address_as_i, assumed,
-            __float_as_int(::fmaxf(val, __int_as_float(assumed))));
-    } while (assumed != old);
-    return __int_as_float(old);
+__device__ unsigned long long pack_depth_idx(float depth, int idx) {
+    unsigned int d_uint = __float_as_uint(depth);
+    return ((unsigned long long)d_uint << 32) | (unsigned int)idx;
+}
+
+__device__ int unpack_idx(unsigned long long val) {
+    return (int)(val & 0xFFFFFFFF);
 }
 
 __global__ void project_point(
@@ -25,8 +22,7 @@ __global__ void project_point(
     const float min_dist,
     const float max_dist,
     const int grid,
-    float* grid_record,
-    bool* mask
+    unsigned long long* grid_record
 )
 {
     auto idx = cg::this_grid().thread_rank();
@@ -37,22 +33,36 @@ __global__ void project_point(
     float3 p_view = transformPoint4x3(p, viewmatrix);
 	float3 p_camera_view = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };
 	float2 pixel2D = { ndc2Pix(p_camera_view.x, W), ndc2Pix(p_camera_view.y, H) };
-    if (p_view.z > max_dist || p_view.z < min_dist 
-        || pixel2D.x > W || pixel2D.y > H
-        || pixel2D.x < 0 || pixel2D.y < 0) {
-        mask[idx] = false;
-        return;
+    point2d[2 * idx] = pixel2D.x;
+    point2d[2 * idx + 1] = pixel2D.y;
+    if (p_view.z > max_dist || p_view.z < min_dist ) return;
+
+    if (pixel2D.x >= 0 && pixel2D.x < W && pixel2D.y >= 0 && pixel2D.y < H) {
+        int g_u = (int)pixel2D.x / grid;
+        int g_v = (int)pixel2D.y / grid;
+        int grid_cols = (W + grid - 1) / grid;
+        int grid_idx = g_v * grid_cols + g_u;
+
+        unsigned long long val = pack_depth_idx(p_view.z, idx);
+        atomicMin(&grid_record[grid_idx], val);
     }
-    int j = pixel2D.y / grid;
-    int i = pixel2D.x / grid;
-    int grid_idx = j * (W / grid) + i;
-    if (atomicMax(&grid_record[grid_idx], p_view.z) == 0) { // first point
-        point2d[2 * idx] = pixel2D.x;
-        point2d[2 * idx + 1] = pixel2D.y;
-        mask[idx] = true;
-    } else {
-        mask[idx] = false;
-    }
+}
+
+__global__ void finalize_mask_kernel(
+    const int num_grids,
+    const unsigned long long* grid_record,
+    bool* mask
+) {
+    int g_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (g_idx >= num_grids) return;
+
+    unsigned long long val = grid_record[g_idx];
+    if (val == ULLONG_MAX) return;
+
+    int winner_idx = unpack_idx(val);
+
+    // 標記勝出者
+    mask[winner_idx] = true;
 }
 
 template<int C> __global__ void colorize_triangle(
@@ -258,7 +268,7 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
 {
     if (N < 3) return;
     thrust::device_vector<float> d_point2d(N * 2);
-    thrust::device_vector<float> d_grid_record(H * W / grid / grid, 0.0f);
+    thrust::device_vector<unsigned long long> d_grid_record(H * W / grid / grid, ULLONG_MAX);
     thrust::device_vector<bool> d_mask(N, false);
     thrust::device_vector<int> d_mapping;
     GDel2DInput triangulation_input;
@@ -268,6 +278,10 @@ void DELAUNAY_TRIANGULATION::delaunay_triangulation(
         N, H, W, pcd, viewmatrix, projmatrix,
         thrust::raw_pointer_cast(d_point2d.data()),
         min_dist, max_dist, grid,
+        thrust::raw_pointer_cast(d_grid_record.data())
+    );
+    finalize_mask_kernel<<<(d_grid_record.size() + 255) / 256, 256>>>(
+        d_grid_record.size(),
         thrust::raw_pointer_cast(d_grid_record.data()),
         thrust::raw_pointer_cast(d_mask.data())
     );
