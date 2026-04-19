@@ -34,7 +34,15 @@ void TriangleModel::setup_optimizer(double lr)
   _optimizer = std::make_unique<torch::optim::Adam>(optimizer_params_groups, torch::optim::AdamOptions(0.f).eps(1e-15));
 }
 
-bool TriangleModel::start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::PointXYZ> &pcd, const Camera &camera, const cv::Mat &keyframe)
+bool TriangleModel::start_from_pcd_and_keyframe(
+  const pcl::PointCloud<pcl::PointXYZ> &pcd, 
+  const Camera &camera, 
+  const cv::Mat &keyframe,
+  const float min_dist,
+  const float max_dist,
+  const int grid,
+  const float dist_threshold
+)
 {
   int append_triangles_num = 0;
   std::tuple<torch::Tensor, torch::Tensor> triangles_and_features = TriangulationCUDA(
@@ -44,10 +52,10 @@ bool TriangleModel::start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::Point
     cv_to_tensor(keyframe),
     camera.getViewMatrix(),
     camera.getFullViewMatrix(),
-    0.1,
-    10.0,
-    5,
-    0.05,
+    min_dist,
+    max_dist,
+    grid,
+    dist_threshold,
     append_triangles_num
   );
   if (append_triangles_num == 0) return false;

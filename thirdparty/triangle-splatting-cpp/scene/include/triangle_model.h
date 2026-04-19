@@ -15,7 +15,14 @@ class TriangleModel
     TriangleModel();
     void setup_optimizer(double lr=0.001);
     void load(const std::string& path); // load from pretrained model
-    bool start_from_pcd_and_keyframe(const pcl::PointCloud<pcl::PointXYZ> &pcd, const Camera &camera, const cv::Mat &keyframe);
+    bool start_from_pcd_and_keyframe(
+      const pcl::PointCloud<pcl::PointXYZ> &pcd, 
+      const Camera &camera, 
+      const cv::Mat &keyframe,
+      const float min_dist,
+      const float max_dist,
+      const int grid,
+      const float dist_threshold);
     // properties
     inline torch::Tensor get_triangle_points() const {return _triangles_points;}
     inline torch::Tensor get_opacity() const {return torch::sigmoid(_opacity);}

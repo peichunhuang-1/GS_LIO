@@ -24,7 +24,7 @@
 class TriangleSplatting: public rclcpp::Node
 {
 public:
-  TriangleSplatting(const float near = 0.01, const float far = 100, const int point_thres = 1e6);
+  TriangleSplatting();
   // training
   // void optimize(torch::Tensor &gt_image);
 
@@ -32,6 +32,12 @@ private:
   // class members
   float render_near;
   float render_far;
+
+  float min_dist;
+  float max_dist;
+  int grid;
+  float dist_threshold;
+
   int point_threshold;
   std::shared_ptr<Camera> camera;
   TriangleModel model;

@@ -1,6 +1,6 @@
 #include "triangle_splatting.h"
 
-TriangleSplatting::TriangleSplatting(const float near, const float far, const int point_thres) : render_near(near), render_far(far), point_threshold(point_thres), rclcpp::Node("triangle_splatting")
+TriangleSplatting::TriangleSplatting() : rclcpp::Node("triangle_splatting")
 {
   mtx = std::make_shared<std::mutex>();
   std::string camera_ns;
@@ -26,6 +26,22 @@ TriangleSplatting::TriangleSplatting(const float near, const float far, const in
   this->get_parameter_or<std::string>("triangle_splatting.camera_link", camera_frame_id, "camera_link");
   this->declare_parameter<std::string>("triangle_splatting.world_link", "world");
   this->get_parameter_or<std::string>("triangle_splatting.world_link", world_frame_id, "world");
+
+  this->declare_parameter<float>("triangle_splatting.min_dist", 0.1f);
+  this->get_parameter_or<float>("triangle_splatting.min_dist", min_dist, 0.1f);
+  this->declare_parameter<float>("triangle_splatting.max_dist", 20.0f);
+  this->get_parameter_or<float>("triangle_splatting.max_dist", max_dist, 20.0f);
+  this->declare_parameter<int>("triangle_splatting.grid", 5);
+  this->get_parameter_or<int>("triangle_splatting.grid", grid, 5);
+  this->declare_parameter<float>("triangle_splatting.dist_threshold", 0.05f);
+  this->get_parameter_or<float>("triangle_splatting.dist_threshold", dist_threshold, 0.05f);
+
+  this->declare_parameter<float>("triangle_splatting.render_near", 0.01);
+  this->get_parameter_or<float>("triangle_splatting.render_near", render_near, render_near);
+  this->declare_parameter<float>("triangle_splatting.render_far", 100.0);
+  this->get_parameter_or<float>("triangle_splatting.render_far", render_far, render_far);
+  this->declare_parameter<int>("triangle_splatting.point_threshold", 1000000);
+  this->get_parameter_or<int>("triangle_splatting.point_threshold", point_threshold, point_threshold);
 }
 
 void TriangleSplatting::set_camera_intrinsic(vk_PinholeCamera_SharedPtr pinhole_camera)
@@ -52,7 +68,7 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
   cv::Mat image = cv_ptr->image;
   
   bool success = tf_buffer->canTransform(
-    world_frame_id,       // target
+    world_frame_id,         // target
     camera_frame_id,        // source
     msg->header.stamp,
     tf2::durationFromSec(3.0)
@@ -73,7 +89,7 @@ void TriangleSplatting::gt_image_cb(sensor_msgs::msg::Image::SharedPtr msg)
   t_vec = -q_eigen.toRotationMatrix().transpose() * t_vec;
   set_camera_pose(q_eigen, t_vec);
 
-  success = model.start_from_pcd_and_keyframe(accum_points, *camera, image);
+  success = model.start_from_pcd_and_keyframe(accum_points, *camera, image, min_dist, max_dist, grid, dist_threshold);
   accum_points.points.clear();
   if (!success) return;
   auto ret = render_impl();
